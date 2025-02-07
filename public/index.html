@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MiracleAGI Voice AI Demo</title>
+
+    <style>
+        @import url('https://cdn.jsdelivr.net/npm/w3-css@4.1.0/w3.min.css');
+        @import url('./main.css');
+    </style>
+
+</head>
+
+<body>
+    <div class="w3-container w3-teal">
+        <h1>MiracleAGI Voice AI Demo!</h1>
+    </div>
+
+    <div class="w3-container w3-section" >
+        <h3 id="message" ></h3>
+
+        <label for="voiceid" > Select Voice </label>
+        <select id="voiceid" class="w3-select w3-border w3-section" >
+            <option value="PDoCXqBQFGsvfO0hNkEs"> KCC HQ</option>
+            <option value="uyVNoMrnUku1dZyVEXwD"> Anna Kim </option>
+            <option value="s07IwTCOrCDCaETjUVjx"> Hyun Bin </option>
+            <option value="z6Kj0hecH20CdetSElRT"> Jennie </option>
+            <option value="U1cJYS4EdbaHmfR7YzHd"> Minho </option>
+            
+        </select>
+
+        <input id="textmessage" type="text" id="input" class="w3-input w3-border w3-section" value="미라클 AGI 에 오신것을 환영합니다." >
+        <button id="runtts" class="w3-button w3-teal" > Run TTS </button>
+
+
+    </div>
+
+    <script type="module" >
+        import main from './index.js';
+        main();
+    </script>
+</body>
+</html>

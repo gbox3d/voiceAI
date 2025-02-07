@@ -1,2 +1,8 @@
 .env
 *.mp3
+*.wav
+node_modules/
+package-lock.json
+.venv/
+weights/
+datasets/

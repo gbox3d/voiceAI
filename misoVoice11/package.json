@@ -1,11 +1,26 @@
 {
   "name": "misovoice11",
   "version": "1.0.0",
+  "type": "module",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "cross-env NODE_ENV=dev nodemon",
+    "start": "cross-env NODE_ENV=product node app.js"
   },
   "author": "",
   "license": "ISC",
-  "description": ""
+  "description": "",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "cross-env": "^7.0.3",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "fs-extra": "^11.3.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongodb": "^6.13.0",
+    "node-fetch": "^3.3.2",
+    "nodemon": "^3.1.9",
+    "yaml": "^2.7.0"
+  }
 }

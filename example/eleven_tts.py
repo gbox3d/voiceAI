@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 import os
 
 # 환경변수 파일(.env) 로드
-load_dotenv()
+load_dotenv('../.env')
 
 print(f"ElevenLabs API 키: {os.getenv('ELEVENLABS_API_KEY')}")
 
