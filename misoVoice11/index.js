@@ -7,6 +7,7 @@ import { MongoClient } from 'mongodb'; // MongoDB 클라이언트 가져오기
 
 import baseApi from './routers/base.js'
 import elevenVoiceApi from './routers/elevenvoice.js'
+import asrApi from './routers/asr.js'
 
 function getPackageVersion() {
   const packageJson = JSON.parse(fs.readFileSync('./package.json', 'utf-8'));
@@ -80,9 +81,11 @@ async function main() {
   //라우터 등록
   const baseApiRouter = baseApi(theApp);
   const elevenVoiceApiRouter = elevenVoiceApi(theApp);
+  const asrApiRouter = asrApi(theApp);
   
   app.use('/api/v1', baseApiRouter);
   app.use('/api/v1/elevenvoice', elevenVoiceApiRouter);
+  app.use('/api/v1/asr', asrApiRouter);
   
   // 에러 핸들링 미들웨어 추가
   app.use((err, req, res, next) => {

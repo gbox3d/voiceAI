@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MiracleAGI Voice AI Demo</title>
+
+    <style>
+        @import url('https://cdn.jsdelivr.net/npm/w3-css@4.1.0/w3.min.css');
+        @import url('./main.css');
+    </style>
+
+</head>
+
+<body>
+
+    <script type="importmap">
+        {
+          "imports": {
+            "lamejs": "https://cdn.jsdelivr.net/npm/lamejs@1.2.1/+esm"
+          }
+        }
+    </script>
+
+    <div class="w3-container w3-teal">
+        <h1>MiracleAGI ASR AI Demo!</h1>
+    </div>
+
+    <div class="w3-container w3-section">
+        <button id="record" class="w3-button w3-red w3-block">Start Record</button>
+    </div>
+
+    <script type="module" >
+        import main from './index.js';
+        main();
+    </script>
+</body>
+</html>

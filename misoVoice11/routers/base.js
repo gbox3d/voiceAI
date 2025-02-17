@@ -7,9 +7,8 @@ export default function (context) {
     // CORS 설정
     router.use(cors());
     // 파일 전송을 위한 미들웨어 설정
-    router.use(express.json({limit:'10mb'})); // JSON 파싱 미들웨어
-    router.use(express.text({limit:'10mb'})); // 텍스트 파싱 미들웨어
-
+    // router.use(express.json({limit:'10mb'})); // JSON 파싱 미들웨어
+    // router.use(express.text({limit:'10mb'})); // 텍스트 파싱 미들웨어
     // router.use(bodyParser.json({ limit: '100mb' }));
 
     console.log('setup base router');
