@@ -43,3 +43,10 @@ result = asr_pipe(audio_file, generate_kwargs={"language": "korean"})
 print("전사 결과:", result["text"])
 
 # %%
+audio_file = "test3.webm"
+result = asr_pipe(audio_file, generate_kwargs={"language": "korean"})
+
+print("전사 결과:", result["text"])
+
+
+# %%

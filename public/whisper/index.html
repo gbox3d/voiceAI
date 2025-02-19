@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -14,25 +15,30 @@
 
 <body>
 
-    <script type="importmap">
-        {
-          "imports": {
-            "lamejs": "https://cdn.jsdelivr.net/npm/lamejs@1.2.1/+esm"
-          }
-        }
-    </script>
-
     <div class="w3-container w3-teal">
         <h1>MiracleAGI ASR AI Demo!</h1>
     </div>
 
     <div class="w3-container w3-section">
-        <button id="record" class="w3-button w3-red w3-block">Start Record</button>
+        <label for="micSelect">마이크 선택:</label>
+        <select id="micSelect" class="w3-select"></select>
+        <br /><br />
+        <button id="record" class="w3-button w3-red">Start Record</button>
+        <button id="record-test" class="w3-button w3-blue">Start Test</button>
     </div>
 
-    <script type="module" >
+    <div id="testList" >
+        <ul class="w3-ul"></ul>
+    </div>
+
+    <div id="uploadList" >
+        <ul class="w3-ul"></ul>
+    </div>
+
+    <script type="module">
         import main from './index.js';
         main();
     </script>
 </body>
+
 </html>

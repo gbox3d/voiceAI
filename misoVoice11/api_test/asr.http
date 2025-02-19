@@ -1,2 +1,9 @@
-###
+###Hello
 GET https://localhost:22281/api/v1/asr
+
+### file list
+GET https://localhost:22281/api/v1/asr/list?page=0
+
+### remove file
+GET https://localhost:22281/api/v1/asr/remove/recording-1739845166399-469304529.webm
+Authorization: Bearer mirakle3117

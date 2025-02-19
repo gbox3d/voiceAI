@@ -1,74 +1,47 @@
-const baseUrl = 'https://ailab.miso.center:22281/api/v1'
-const authToken = '112u642l!v*qw6hm)fz_%4zx9-je($t=hlb$^yw+6^h$a#!)-('
-const dom_message = document.querySelector('#message');
 
-const inputTextMessage = document.querySelector('input#textmessage');
-const btnRunTTS = document.querySelector('Button#runtts');
-const selectVoiceId = document.querySelector('select#voiceid');
+const Context = {
+
+    baseApiUrl: localStorage.getItem('BASE_API_URL'),
+    authToken: localStorage.getItem('AUTH_TOKEN'),
+    doms: {},
+
+}
 
 export default async () => {
     console.log('start app');
 
     try {
-        const response = await fetch(`${baseUrl}/elevenvoice/about`, {
+        const response = await fetch(`${Context.baseApiUrl}/auth`, {
             method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${authToken}`
-            },
+            headers: { 'Content-Type': 'application/json' ,
+            'Authorization': `Bearer ${Context.authToken}`
+            }
         });
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('Failed to get base api', errorText);
-            return;
-        }
         const data = await response.json();
-        console.log('base api:', data);
-
-        dom_message.innerHTML = `Successfully auth to voiceai api`;
-
+        console.log(data);
+    
 
     }
     catch (error) {
-        console.error('Failed to get base api', error);
-        dom_message.innerHTML = `Failed to auth to voiceai api`;
+        console.error('error:', error);
+    }  
+
+    
+    Context.doms = {
+        input_apiUrl: document.querySelector('#apiBaseUrl'),
+        input_authToken: document.querySelector('#authToken'),
+        btn_save: document.querySelector('#save')
     }
 
-    btnRunTTS.addEventListener('click', async () => {
+    Context.doms.input_apiUrl.value = Context.baseApiUrl;
+    Context.doms.input_authToken.value = Context.authToken;
 
-        const _text = inputTextMessage.value;
-        console.log('run tts ', _text);
-        try {
-            const response = await fetch(`${baseUrl}/elevenvoice/tts`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${authToken}`
-                },
-                body: JSON.stringify({
-                    text: _text,
-                    voice_id: selectVoiceId.value,
-                })
-            });
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('Failed to generate TTS', errorText);
-                dom_message.innerHTML = `Failed to generate TTS: ${errorText}`;
-                return;
-            }
-            // 반환된 음성 데이터를 Blob으로 변환
-            const audioBlob = await response.blob();
-            // Blob을 URL로 변환
-            const audioUrl = URL.createObjectURL(audioBlob);
-            // Audio 객체를 생성하여 재생
-            const audio = new Audio(audioUrl);
-            audio.play();
-            dom_message.innerHTML = `Playing TTS for: "${_text}"`;
-        }
-        catch (error) {
-            console.error('Error in TTS', error);
-            dom_message.innerHTML = `Error generating TTS`;
-        }
+    Context.doms.btn_save.addEventListener('click', async () => {
+        localStorage.setItem('BASE_API_URL', Context.doms.input_apiUrl.value);
+        localStorage.setItem('AUTH_TOKEN', Context.doms.input_authToken.value);
+        alert('저장되었습니다.');
+    }
+    );
 
-    });
+
 };

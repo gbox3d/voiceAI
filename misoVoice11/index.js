@@ -25,7 +25,8 @@ async function main() {
 
   const theApp = {
     version: getPackageVersion(),
-    eleven_api_key : process.env.ELEVENLABS_API_KEY,
+    eleven_api_key : process.env.ELEVENLABS_API_KEY
+
   };
 
   

@@ -23,6 +23,12 @@ export default function (context) {
             }
             console.log('token:', token);
 
+            if(process.env.NODE_ENV === 'dev'){
+                req.user = { username: 'devtestuser' };
+                console.log(`dev mode is used. ip:${req.ip}`);
+                return next();
+            }
+
             //admin token check
             if (token === context.admin_key) {
                 req.user = { username: 'admin' };
