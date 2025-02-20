@@ -7,6 +7,26 @@ const Context = {
     selectedDeviceId: null
 };
 
+async function Recognize(file) {
+    {
+        try {
+            const response = await fetch(`${Context.baseUrl}/asr/recognize/${file}`, {
+                method: 'GET'
+            });
+            const data = await response.json();
+            console.log(data);
+
+            Context.doms.resultText.value = data.text;
+        }
+        catch (err) {
+            console.error('인식 실패:', err);
+
+
+            Context.doms.resultText.value = '인식 실패' + err;
+        }
+    }
+
+}
 
 async function updateFileList() {
     //file list
@@ -62,22 +82,15 @@ async function updateFileList() {
         const RecognizeBtn = document.createElement('button');
         RecognizeBtn.classList.add('w3-btn', 'w3-blue');
         RecognizeBtn.textContent = 'Recognize';
-        RecognizeBtn.onclick = async () => {
-            try {
-                const response = await fetch(`${Context.baseUrl}/asr/recognize/${file}`, {
-                    method: 'GET'
-                });
-                const data = await response.json();
-                console.log(data);
+        RecognizeBtn.addEventListener('click', async () => {
+            RecognizeBtn.disabled = true;
+            RecognizeBtn.textContent = 'Recognizing...';
+            await Recognize(file);
 
-                Context.doms.resultText.textContent = data.text;
-            }
-            catch (err) {
-                console.error('인식 실패:', err);
+            RecognizeBtn.disabled = false;
+            RecognizeBtn.textContent = 'Recognize';
 
-                Context.doms.resultText.textContent = '인식 실패' + err;
-            }
-        }
+        });
         _li.appendChild(RecognizeBtn);
 
         const deleteBtn = document.createElement('button');
@@ -120,7 +133,7 @@ export default async () => {
         micSelect: document.querySelector('select#micSelect'),
         testList: document.querySelector('#testList ul'),
         uploadList: document.querySelector('#uploadList ul'),
-        resultText : document.querySelector('#result')
+        resultText: document.querySelector('#result')
     };
 
     console.log('start app');
@@ -186,17 +199,7 @@ export default async () => {
     let mediaRecorder; // outer variable
     let stream;
 
-    // 지원하는 MIME 타입을 확인하는 함수
-    function getSupportedMimeType() {
-        if (MediaRecorder.isTypeSupported('audio/ogg; codecs=opus')) {
-            return 'audio/ogg; codecs=opus';
-        } else if (MediaRecorder.isTypeSupported('audio/webm; codecs=opus')) {
-            return 'audio/webm; codecs=opus';
-        } else {
-            console.warn("지원되는 OGG/WebM opus MIME 타입이 없습니다. 기본값을 사용합니다.");
-            return '';
-        }
-    }
+    
 
     // 녹음 시작 함수
     async function startRecording() {
@@ -281,113 +284,4 @@ export default async () => {
         isRecording = !isRecording;
     });
 
-
-    // 기존 녹음 버튼(서버 업로드용) 관련 변수/함수는 생략(이미 구현된 코드)
-    // -----------------------------------------------
-    // Test 녹음 (로컬 재생/다운로드) 관련 변수 및 함수
-    let isTestRecording = false;
-    let testMediaRecorder;
-    let testStream;
-    let testChunks = [];
-
-    // Test 녹음 시작 함수
-    async function startTestRecording() {
-        try {
-            // 선택된 마이크(없으면 기본) 사용하여 오디오 스트림 얻기
-            const constraints = {
-                audio: { deviceId: Context.selectedDeviceId ? { exact: Context.selectedDeviceId } : undefined }
-            };
-
-            // const constraints = { audio: true };
-            testStream = await navigator.mediaDevices.getUserMedia(constraints);
-            const mimeType = getSupportedMimeType();
-            const options = mimeType ? { mimeType } : undefined;
-            testMediaRecorder = new MediaRecorder(testStream, options);
-            testChunks = [];
-
-            testMediaRecorder.ondataavailable = (e) => {
-                if (e.data.size > 0) {
-                    testChunks.push(e.data);
-                }
-            };
-
-            testMediaRecorder.onstop = () => {
-                const blob = new Blob(testChunks, { type: mimeType || 'audio/webm' });
-                const url = URL.createObjectURL(blob);
-                console.log('Test 녹음된 파일 URL:', url);
-
-                // 오디오 재생 요소 생성
-                const audioEl = document.createElement('audio');
-                audioEl.controls = true;
-                audioEl.src = url;
-                // 페이지에 추가 (원하는 위치에 appendChild)
-                document.body.appendChild(audioEl);
-
-                // 다운로드 링크 생성
-                const downloadLink = document.createElement('a');
-
-                downloadLink.classList.add('w3-btn', 'w3-blue');
-
-                let extension = 'webm';
-                if (mimeType && mimeType.indexOf('ogg') !== -1) {
-                    extension = 'ogg';
-                }
-                downloadLink.href = url;
-                downloadLink.download = `test_recording.${extension}`;
-                downloadLink.textContent = 'Download Test Recording';
-
-                //delete button
-                const deleteBtn = document.createElement('button');
-                deleteBtn.classList.add('w3-btn', 'w3-red');
-                deleteBtn.textContent = 'Delete';
-                deleteBtn.onclick = () => {
-                    audioEl.remove();
-                    downloadLink.remove();
-                    deleteBtn.remove();
-                };
-
-                const _li = document.createElement('li');
-
-                _li.classList.add('w3-bar');
-                _li.appendChild(audioEl);
-                _li.appendChild(downloadLink);
-                downloadLink.classList.add('w3-bar-item');
-                _li.appendChild(deleteBtn);
-                deleteBtn.classList.add('w3-bar-item');
-                Context.doms.testList.appendChild(_li);
-            };
-
-            testMediaRecorder.start();
-            console.log("Test 녹음 시작");
-        } catch (err) {
-            console.error("Test 녹음 시작 중 에러:", err);
-        }
-    }
-
-    // Test 녹음 중지 함수
-    function stopTestRecording() {
-        if (testMediaRecorder && testMediaRecorder.state !== 'inactive') {
-            testMediaRecorder.stop();
-            if (testStream) {
-                testStream.getTracks().forEach(track => track.stop());
-            }
-            console.log("Test 녹음 중지");
-        }
-    }
-
-    // Test 녹음 버튼 이벤트 리스너 등록
-    if (Context.doms.btnRecordTest) {
-        Context.doms.btnRecordTest.addEventListener('click', async (evt) => {
-            if (!isTestRecording) {
-                evt.target.innerText = 'Stop Test';
-                console.log('Test 녹음 시작 요청');
-                await startTestRecording();
-            } else {
-                evt.target.innerText = 'Start Test';
-                console.log('Test 녹음 중지 요청');
-                stopTestRecording();
-            }
-            isTestRecording = !isTestRecording;
-        });
-    }
 };

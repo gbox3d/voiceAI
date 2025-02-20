@@ -22,27 +22,17 @@
     <div class="w3-container w3-section">
         <label for="micSelect">마이크 선택:</label>
         <select id="micSelect" class="w3-select"></select>
-        <br /><br />
+        <label for="mediaType">Media Type:</label>
+        <p id="mediaType" ></p>
         <button id="record" class="w3-button w3-red">Start Record</button>
     </div>
 
-    <div class="w3-container w3-section">
-        <label for="result">Result:</label>
-        <input type="text" id="result" class="w3-input" />
-    </div>
-
-    <div id="uploadList" >
+    <div id="testList" class="w3-container" >
         <ul class="w3-ul"></ul>
     </div>
 
-    <div class="w3-section w3-container">
-        <ul class="w3-ul">
-            <li>
-                <a href="./ex01/" class="w3-button w3-block w3-green" >ex01</a>
-            </li>
-            
-
-        </ul>
+    <div class="w3-container" >
+        <div id="log"></div>
     </div>
 
     <script type="module">
