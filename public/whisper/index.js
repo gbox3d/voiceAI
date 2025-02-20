@@ -59,11 +59,39 @@ async function updateFileList() {
         };
         _li.appendChild(playBtn);
 
+        const RecognizeBtn = document.createElement('button');
+        RecognizeBtn.classList.add('w3-btn', 'w3-blue');
+        RecognizeBtn.textContent = 'Recognize';
+        RecognizeBtn.onclick = async () => {
+            try {
+                const response = await fetch(`${Context.baseUrl}/asr/recognize/${file}`, {
+                    method: 'GET'
+                });
+                const data = await response.json();
+                console.log(data);
+
+                Context.doms.resultText.textContent = data.text;
+            }
+            catch (err) {
+                console.error('인식 실패:', err);
+
+                Context.doms.resultText.textContent = '인식 실패' + err;
+            }
+        }
+        _li.appendChild(RecognizeBtn);
+
         const deleteBtn = document.createElement('button');
         deleteBtn.classList.add('w3-btn', 'w3-red');
         deleteBtn.textContent = 'Delete';
         deleteBtn.onclick = async () => {
             try {
+
+                const _ok = confirm('삭제하시겠습니까?');
+
+                if (!_ok) {
+                    return;
+                }
+
                 const response = await fetch(`${Context.baseUrl}/asr/remove/${file}`, {
                     method: 'GET'
                 });
@@ -91,8 +119,8 @@ export default async () => {
         btnRecord: document.querySelector('button#record'),
         micSelect: document.querySelector('select#micSelect'),
         testList: document.querySelector('#testList ul'),
-        uploadList: document.querySelector('#uploadList ul')
-
+        uploadList: document.querySelector('#uploadList ul'),
+        resultText : document.querySelector('#result')
     };
 
     console.log('start app');

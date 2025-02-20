@@ -6,7 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "cross-env NODE_ENV=dev nodemon",
-    "start": "cross-env NODE_ENV=product node app.js"
+    "start": "cross-env NODE_ENV=product node index.js"
   },
   "author": "",
   "license": "ISC",

@@ -35,7 +35,7 @@ print(" 자동 음성 인식(ASR)  파이프라인 생성 완료")
 
 #%%
 # mp3 파일 경로 (예: "input.mp3")
-audio_file = "test2.mp3"
+audio_file = "/home/gbox3d/work/web_pub/uploads/recording-1739858011070-196134560_unknown.webm"
 
 # 한국어로 전사하도록 language 파라미터 설정
 result = asr_pipe(audio_file, generate_kwargs={"language": "korean"})

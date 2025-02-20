@@ -7,3 +7,6 @@ GET https://localhost:22281/api/v1/asr/list?page=0
 ### remove file
 GET https://localhost:22281/api/v1/asr/remove/recording-1739845166399-469304529.webm
 Authorization: Bearer mirakle3117
+
+### Speech File to text
+GET https://localhost:22281/api/v1/asr/recognize/recording-1739858011070-196134560_unknown.webm
