@@ -1,7 +1,8 @@
-#testList {
-    height: 200px;
-}
+
 
 #uploadList {
-    height: 200px;
+    height: 300px;
+    overflow-y: auto;
+    border: 1px solid #ccc;
+    padding: 5px;
 }

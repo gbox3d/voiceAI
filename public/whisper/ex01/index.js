@@ -56,7 +56,7 @@ function micSetup() {
             };
 
             Stream = await navigator.mediaDevices.getUserMedia(constraints);
-            const mimeType = getSupportedMimeType();
+            const mimeType = Context.miclibs.mimeType;
             const options = mimeType ? { mimeType } : undefined;
             _mediaRecorder = new MediaRecorder(Stream, options);
             Chunks = [];
@@ -163,10 +163,11 @@ export default async () => {
     };
 
     console.log('start app');
-    addLog('start app');
+    addLog('start app v1.0');
 
 
     const miclibs = await micLibsSetup();
+    Context.miclibs = miclibs;
     console.log(miclibs);
 
     if(miclibs.isSupported) {
@@ -181,20 +182,4 @@ export default async () => {
         return;
     }
 
-
-    // // 녹음 기능 지원 여부 체크
-    // if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || typeof MediaRecorder === 'undefined') {
-    //     console.error("이 브라우저는 녹음 기능을 지원하지 않습니다.");
-    //     Context.doms.btnRecord.disabled = true;
-    //     Context.doms.btnRecord.innerText = '녹음 기능 미지원';
-    //     return;
-    // } else {
-
-    //     const mediaType = getSupportedMimeType();
-    //     console.log("이 브라우저는 녹음 기능을 지원합니다. " , mediaType);
-    //     Context.doms.mediaType.innerText = `This Browser Supported Media Type : ${mediaType}`;
-    //     updateMicList(); // 마이크 목록 업데이트
-    //     micSetup(); // 녹음 기능 설정
-    // }
-    
 };

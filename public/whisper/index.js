@@ -1,4 +1,4 @@
-
+import micLibsSetup from '../libs/miclibs.js';
 const Context = {
     baseUrl: localStorage.getItem('BASE_API_URL'),
     authToken: localStorage.getItem('AUTH_TOKEN'),
@@ -125,44 +125,12 @@ async function updateFileList() {
     });
 }
 
-export default async () => {
-    // DOM 요소 초기화
-    Context.doms = {
-        btnRecordTest: document.querySelector('button#record-test'),
-        btnRecord: document.querySelector('button#record'),
-        micSelect: document.querySelector('select#micSelect'),
-        testList: document.querySelector('#testList ul'),
-        uploadList: document.querySelector('#uploadList ul'),
-        resultText: document.querySelector('#result')
-    };
 
-    console.log('start app');
-
-    // ASR API 테스트(GET 요청)
-    try {
-        const response = await fetch(`${Context.baseUrl}/asr`, {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' }
-        });
-        const data = await response.json();
-        console.log(data);
-    } catch (error) {
-        console.error("GET /asr 실패:", error);
-    }
-
-    // 녹음 기능 지원 여부 체크
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || typeof MediaRecorder === 'undefined') {
-        console.error("이 브라우저는 녹음 기능을 지원하지 않습니다.");
-        Context.doms.btnRecord.disabled = true;
-        Context.doms.btnRecord.innerText = '녹음 기능 미지원';
-        return;
-    } else {
-        console.log("이 브라우저는 녹음 기능을 지원합니다.");
-    }
-
-
-    // 업로드된 파일 목록 불러오기
-    updateFileList();
+function micSetup() {
+    // 녹음 관련 변수
+    let isRecording = false;
+    let mediaRecorder; // outer variable
+    let stream;
 
     // 마이크 장치 목록 불러오기 및 select 요소 채우기
     async function updateMicList() {
@@ -184,22 +152,14 @@ export default async () => {
             console.error("마이크 목록 업데이트 에러:", err);
         }
     }
-    updateMicList();
-
+    
     // 선택된 마이크 장치 변경 시 업데이트
     Context.doms.micSelect.addEventListener('change', (evt) => {
         Context.selectedDeviceId = evt.target.value;
         console.log("선택된 마이크:", Context.selectedDeviceId);
     });
 
-
-
-    // 녹음 관련 변수
-    let isRecording = false;
-    let mediaRecorder; // outer variable
-    let stream;
-
-    
+    updateMicList();
 
     // 녹음 시작 함수
     async function startRecording() {
@@ -209,7 +169,7 @@ export default async () => {
                 audio: { deviceId: Context.selectedDeviceId ? { exact: Context.selectedDeviceId } : undefined }
             };
             stream = await navigator.mediaDevices.getUserMedia(constraints);
-            const mimeType = getSupportedMimeType();
+            const mimeType = Context.miclibs.mimeType;
             const options = mimeType ? { mimeType } : undefined;
             mediaRecorder = new MediaRecorder(stream, options);
             let chunks = [];
@@ -283,5 +243,56 @@ export default async () => {
         }
         isRecording = !isRecording;
     });
+}
+
+export default async () => {
+    // DOM 요소 초기화
+    Context.doms = {
+        btnRecord: document.querySelector('button#record'),
+        micSelect: document.querySelector('select#micSelect'),
+        uploadList: document.querySelector('#uploadList ul'),
+        resultText: document.querySelector('#result'),
+        mediaType: document.querySelector('#mediaType')
+
+    };
+
+    console.log('start app');
+
+    // ASR API 테스트(GET 요청)
+    try {
+        const response = await fetch(`${Context.baseUrl}/asr`, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await response.json();
+        console.log(data);
+    } catch (error) {
+        console.error("GET /asr 실패:", error);
+    }
+
+    // 업로드된 파일 목록 불러오기
+    updateFileList();
+
+    const miclibs = await micLibsSetup();
+    Context.miclibs = miclibs;
+    console.log(miclibs);
+
+    if (miclibs.isSupported) {
+        Context.doms.mediaType.innerText = `This Browser Supported Media Type : ${miclibs.mimeType}`;
+        // updateMicList(); // 마이크 목록 업데이트
+        micSetup(); // 녹음 기능 설정
+    }
+    else {
+        console.error("이 브라우저는 녹음 기능을 지원하지 않습니다.");
+        Context.doms.btnRecord.disabled = true;
+        Context.doms.btnRecord.innerText = '녹음 기능 미지원';
+        return;
+    }
+
+
+
+
+
+
 
 };
