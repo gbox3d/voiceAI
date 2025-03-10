@@ -7,3 +7,4 @@ package-lock.json
 weights/
 datasets/
 __pycache__/
+temp/
