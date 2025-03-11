@@ -1,5 +1,5 @@
 #%%
-from datasets import load_dataset
+from datasets import load_dataset # pip install datasets
 from datasets import load_from_disk
 
 #%%
