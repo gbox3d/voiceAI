@@ -8,12 +8,12 @@ from server import AsrServer
 
 import torch
 import numpy as np
-from pydub import AudioSegment
+from pydub import AudioSegment # pip install pydub
 
 # pydub.AudioSegment는 ffmpeg/avconv가 설치되어 있어야 mp3, webm 등을 처리 가능
 # (pip install pydub, 그리고 OS에 ffmpeg 설치 필요)
 
-from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
+from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline # pip install transformers
 
 # FutureWarning 제거
 import warnings
