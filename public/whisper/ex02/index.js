@@ -1,9 +1,8 @@
 import micLibsSetup from '../../libs/miclibs.js';
 
 const Context = {
-    baseUrl: localStorage.getItem('BASE_API_URL'),
+    // baseUrl: 'https://ailab.miso.center:22281/api/v1',
     authToken: localStorage.getItem('AUTH_TOKEN'),
-    uploadUrl: 'https://ailab.miso.center:22280/ /',
     doms: {},
     selectedDeviceId: null
 };
@@ -51,7 +50,9 @@ function micSetup() {
             // 선택된 마이크(없으면 기본) 사용하여 오디오 스트림 얻기
             const constraints = {
                 audio: { 
-                    deviceId: Context.selectedDeviceId ? { exact: Context.selectedDeviceId } : undefined 
+                    deviceId: Context.selectedDeviceId 
+                        ? { exact: Context.selectedDeviceId } 
+                        : undefined 
                 }
             };
 
@@ -69,51 +70,51 @@ function micSetup() {
                 }
             };
 
-            _mediaRecorder.onstop = () => {
+            // 녹음이 정지되었을 때 호출되는 부분
+            _mediaRecorder.onstop = async () => {
                 const blob = new Blob(Chunks, { type: mimeType || 'audio/webm' });
                 const url = URL.createObjectURL(blob);
-                console.log('Test 녹음된 파일 URL:', url);
-                addLog('Test 녹음 완료');
+                addLog(`Test 녹음 완료 -> blob url: ${url}`);
 
-                // 오디오 재생 요소 생성
-                const audioEl = document.createElement('audio');
-                audioEl.controls = true;
-                audioEl.src = url;
-                // 페이지에 추가 (원하는 위치에 appendChild)
-                document.body.appendChild(audioEl);
+                // ==============================
+                // 1) ASR 요청 (transcribe) 부분
+                // ==============================
+                try {
+                    // Blob 데이터를 FormData로 감싸서 전송 준비
+                    const formData = new FormData();
+                    // 서버가 파일 필드명을 'audio'로 받으므로 'audio'로 설정
+                    // 파일명은 편의를 위해 'recorded' 같은 임의의 이름을 사용
+                    formData.append('audio', blob, 'recorded.webm');
 
-                // 다운로드 링크 생성
-                const downloadLink = document.createElement('a');
+                    // fetch를 통해 서버에 전송
+                    const response = await fetch(`${Context.baseUrl}/asr/transcribe`, {
+                        method: 'POST',
+                        body: formData
+                    });
 
-                downloadLink.classList.add('w3-btn', 'w3-blue');
+                    if (!response.ok) {
+                        // HTTP 200이 아닌 경우 오류 처리
+                        const errMsg = await response.text();
+                        addLog(`[ERROR] ASR 변환 요청 실패: ${errMsg}`);
+                        return;
+                    }
 
-                let extension = 'webm';
-                if (mimeType && mimeType.indexOf('ogg') !== -1) {
-                    extension = 'ogg';
+                    // JSON으로 응답 파싱
+                    const result = await response.json();
+                    if (result.error) {
+                        addLog(`[ERROR] ASR 변환 실패: ${result.error}`);
+                    } else {
+                        // 정상적으로 텍스트가 반환된 경우
+                        const recognizedText = result.text;
+                        addLog(`[INFO] ASR 변환 결과: ${recognizedText}`);
+                        Context.doms.resultTxt.innerText = recognizedText;
+                    }
+                } catch (err) {
+                    console.error('ASR 요청 중 에러:', err);
+                    addLog(`[ERROR] ASR 요청 중 에러: ${err.message}`);
                 }
-                downloadLink.href = url;
-                downloadLink.download = `test_recording.${extension}`;
-                downloadLink.textContent = 'Download Test Recording';
+                // ==============================
 
-                //delete button
-                const deleteBtn = document.createElement('button');
-                deleteBtn.classList.add('w3-btn', 'w3-red');
-                deleteBtn.textContent = 'Delete';
-                deleteBtn.onclick = () => {
-                    audioEl.remove();
-                    downloadLink.remove();
-                    deleteBtn.remove();
-                };
-
-                const _li = document.createElement('li');
-
-                _li.classList.add('w3-bar');
-                _li.appendChild(audioEl);
-                _li.appendChild(downloadLink);
-                downloadLink.classList.add('w3-bar-item');
-                _li.appendChild(deleteBtn);
-                deleteBtn.classList.add('w3-bar-item');
-                Context.doms.SpeechList.appendChild(_li);
             };
 
             _mediaRecorder.start();
@@ -122,7 +123,7 @@ function micSetup() {
 
         } catch (err) {
             console.error("Test 녹음 시작 중 에러:", err);
-            alert("Test 녹음 시작 중 에러 발생" , err);
+            alert("Test 녹음 시작 중 에러 발생" + err);
         }
     }
 
@@ -145,12 +146,13 @@ function micSetup() {
         } else {
             evt.target.innerText = 'Start Test';
             console.log('Test 녹음 중지 요청');
-            console.log('Test 녹음 중지 요청');
+            addLog('Test 녹음 중지 요청');
             stopRecording();
         }
         isRecording = !isRecording;
     });
 }
+
 
 export default async () => {
     // DOM 요소 초기화
@@ -159,11 +161,16 @@ export default async () => {
         micSelect: document.querySelector('select#micSelect'),
         SpeechList: document.querySelector('#testList ul'),
         mediaType : document.querySelector('#mediaType'),
-        logTxt : document.querySelector('#log')
+        logTxt : document.querySelector('#log'),
+        resultTxt : document.querySelector('#resultTxt')
     };
 
     console.log('start app');
     addLog('start app v1.0');
+
+    Context.baseUrl =  `${location.protocol}//${location.hostname}:22281/api/v1`;
+
+    console.log('Context.baseUrl : ', Context.baseUrl);
 
 
     const miclibs = await micLibsSetup();

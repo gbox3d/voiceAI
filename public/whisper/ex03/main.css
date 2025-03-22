@@ -1,0 +1,23 @@
+#testList {
+    height: 200px;
+}
+
+#uploadList {
+    height: 200px;
+}
+
+#log {
+    height: 200px;
+    font-size: 12px;
+    background-color: black;
+    color: green;
+    overflow: auto;
+}
+
+#response {
+    height: 200px;
+    background-color: black;
+    color: green;
+    
+    overflow: auto;
+}

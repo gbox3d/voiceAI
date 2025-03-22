@@ -137,7 +137,8 @@ class AsrServer:
                 format_map = {
                     1: "wav",
                     2: "mp3",
-                    3: "webm"
+                    3: "webm",
+                    4: "mp4"  # 새로운 포맷코드 4에 대한 매핑 추가
                 }
 
                 if format_code not in format_map:

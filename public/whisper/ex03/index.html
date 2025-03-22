@@ -16,37 +16,33 @@
 <body>
 
     <div class="w3-container w3-teal">
-        <h1>MiracleAGI ASR AI Demo!</h1>
+        <h1>MiracleAGI voice Chat Demo</h1>
     </div>
 
     <div class="w3-container w3-section">
         <label for="micSelect">마이크 선택:</label>
         <select id="micSelect" class="w3-select"></select>
+        <label for="mediaType">Media Type:</label>
         <p id="mediaType" ></p>
-        <br /><br />
         <button id="record" class="w3-button w3-red">Start Record</button>
     </div>
 
     <div class="w3-container w3-section">
-        <label for="result">Result:</label>
-        <input type="text" id="result" class="w3-input" />
+        <p id="resultTxt" ></p>
     </div>
 
-    <div id="uploadList" >
+    <div class="w3-container w3-section" id="response" >
+        <h3>Response :</h3>
+        <p id="responseTxt" ></p>
+
+    </div>
+
+    <div id="testList" class="w3-container" >
         <ul class="w3-ul"></ul>
     </div>
 
-    <div class="w3-section w3-container">
-        <ul class="w3-ul">
-            <li>
-                <a href="./ex01/" class="w3-button w3-block w3-green" >ex01</a>
-            </li>
-            <li>
-                <a href="./ex02/" class="w3-button w3-block w3-green" >ex02</a>
-            </li>
-            
-
-        </ul>
+    <div class="w3-container" >
+        <div id="log"></div>
     </div>
 
     <script type="module">

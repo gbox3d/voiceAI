@@ -24,34 +24,34 @@ export default function (context) {
     const authMiddleware = AuthSetup(context);
 
     const asrServer = {
-        host : process.env.ASR_HOST || 'localhost',
-        port : process.env.ASR_PORT || 2500,
-        checkcode : process.env.ASR_CHECKCODE || 20250122
+        host: process.env.ASR_HOST || 'localhost',
+        port: process.env.ASR_PORT || 2500,
+        checkcode: process.env.ASR_CHECKCODE || 20250122
     }
 
-    function stt(audioData,formatCode,res) {
+    function stt(audioData, formatCode, res) {
 
         // ASR 서버에 전달할 값들 (체크코드, 요청 코드 등)
         const checkcode = asrServer.checkcode; // 예시
         const requestCode = 0x01; // STT 요청 코드
-    
+
         // 헤더 구성: 8바이트 (checkcode 4바이트, requestCode 4바이트)
         const headerBuffer = Buffer.alloc(8);
         headerBuffer.writeInt32BE(checkcode, 0);
         headerBuffer.writeInt32BE(requestCode, 4);
-    
+
         // 포맷 코드: 1바이트
         const formatBuffer = Buffer.alloc(1);
         formatBuffer.writeUInt8(formatCode, 0);
-    
+
         // 오디오 데이터 길이: 4바이트 정수 (빅엔디안)
         const sizeBuffer = Buffer.alloc(4);
         sizeBuffer.writeInt32BE(audioData.length, 0);
-    
+
         // Python ASR 서버 (예: localhost:2500)에 연결하여 전송
         const client = new net.Socket();
         let dataBuffers = [];
-    
+
         client.connect(asrServer.port, asrServer.host, () => {
             console.log('[INFO] Python ASR 서버에 연결됨.');
             // 순서대로 헤더, 포맷, 크기, 파일 데이터를 전송
@@ -60,11 +60,11 @@ export default function (context) {
             client.write(sizeBuffer);
             client.write(audioData);
         });
-    
+
         client.on('data', (data) => {
             dataBuffers.push(data);
         });
-    
+
         client.on('end', () => {
             const fullBuffer = Buffer.concat(dataBuffers);
             // 응답 데이터 파싱
@@ -75,7 +75,7 @@ export default function (context) {
             const status = fullBuffer.readUInt8(8);
 
             console.log(`[INFO] ASR 서버 응답: checkcode=${respCheckcode}, requestCode=${respRequestCode}, status=${status}`);
-    
+
             if (status !== 0) {
                 console.error(`[ERROR] STT 변환 실패, status: ${status}`);
                 return res.status(500).json({ error: 'STT 변환 중 오류가 발생했습니다.', status });
@@ -84,11 +84,11 @@ export default function (context) {
             const textLength = fullBuffer.readInt32BE(9);
             // 텍스트 데이터: 13번째 바이트부터 textLength 바이트
             const text = fullBuffer.subarray(13, 13 + textLength).toString('utf8');
-    
+
             console.log(`[INFO] 전사 결과: ${text}`);
-            res.json({ text , status });
+            res.json({ text, status });
         });
-    
+
         client.on('error', (err) => {
             console.error('[ERROR] Python ASR 서버 연결 오류:', err.message);
             res.status(500).json({ error: 'Python ASR 서버 연결 오류', details: err.message });
@@ -233,6 +233,66 @@ export default function (context) {
         } catch (err) {
             console.error('[ERROR] 파일 읽기 또는 처리 중 오류:', err.message);
             res.status(500).json({ error: '파일 읽기 또는 처리 중 오류', details: err.message });
+        }
+    });
+
+
+    // asr.js 파일에 추가
+
+    // multer 메모리 스토리지 설정 (파일을 디스크에 저장하지 않고 메모리에 보관)
+    const memoryStorage = multer.memoryStorage();
+    const uploadMemory = multer({
+        storage: memoryStorage,
+        fileFilter: (req, file, cb) => {
+            // 오디오 파일만 허용
+            if (file.mimetype === 'audio/mpeg' ||
+                file.mimetype === 'audio/mp3' ||
+                file.mimetype === 'audio/ogg' ||
+                file.mimetype === 'audio/wav' ||
+                file.mimetype === 'audio/webm' ||
+                file.mimetype === 'audio/mp4'   // 추가
+                
+            ) {
+                cb(null, true);
+            } else {
+                console.log(`[ERROR] 지원되는 오디오 파일만 업로드할 수 있습니다: ${file.mimetype}`);
+                cb(new Error('지원되는 오디오 파일만 업로드할 수 있습니다.'), false);
+            }
+        }
+    });
+
+    // POST /api/v1/asr/transcribe 엔드포인트: 파일 직접 업로드 및 변환
+    router.post('/transcribe', uploadMemory.single('audio'), (req, res) => {
+        if (!req.file) {
+            return res.status(400).json({ error: '파일이 업로드되지 않았습니다.' });
+        }
+
+        try {
+            // 메모리에서 직접 오디오 데이터 가져오기
+            const audioData = req.file.buffer;
+
+            // 파일 MIME 타입에 따라 포맷 코드 결정
+            let formatCode = 0;
+            if (req.file.mimetype === 'audio/wav') formatCode = 1;
+            else if (req.file.mimetype === 'audio/mpeg' || req.file.mimetype === 'audio/mp3') formatCode = 2;
+            else if (req.file.mimetype === 'audio/webm') formatCode = 3;
+            else if (req.file.mimetype === 'audio/ogg') formatCode = 3; // ogg는 일반적으로 webm과 같은 코드로 처리
+            else if (req.file.mimetype === 'audio/mp4' || req.file.mimetype === 'video/mp4') {
+                // 여기서 mp4에 대한 새 코드 할당 (예: 4)
+                formatCode = 4;
+              }
+            else {
+                return res.status(400).json({ error: '지원하지 않는 파일 포맷입니다.' });
+            }
+
+            console.log(`[INFO] 직접 변환 요청: ${req.file.originalname}, 크기: ${audioData.length} 바이트, 포맷 코드: ${formatCode}`);
+
+            // STT 처리 함수 호출
+            stt(audioData, formatCode, res);
+
+        } catch (err) {
+            console.error('[ERROR] 파일 처리 중 오류:', err.message);
+            res.status(500).json({ error: '파일 처리 중 오류', details: err.message });
         }
     });
 
