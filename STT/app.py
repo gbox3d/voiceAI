@@ -19,7 +19,7 @@ from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline # pi
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
 
-
+5879
 
 def main():
     # 1) 커맨드라인 인자 파서 설정
