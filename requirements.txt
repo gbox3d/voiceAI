@@ -2,3 +2,4 @@ transformers
 accelerate
 python-dotenv
 scipy
+pydub
