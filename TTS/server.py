@@ -1,69 +1,24 @@
-# filename: tts_server.py
-# Author: gbox3d
-# Created: 2025-03-26
-# Description: This file is a part of TTS App Server
-# 위의 소스정보 부분을 수정하지 않습니다. 아래 부터 수정할수있습니다.
+# filename: server.py
+# author: gbox3d
+# created: 2025-03-26
+# 이 주석은 수정하지 마세요.
 
+import os
 import asyncio
 import struct
-import sys
-import os
+import socket
 import io
+import sys
+import time
+import hashlib
 
 import torch
 import numpy as np
-import scipy.io.wavfile
-
 from transformers import VitsModel, AutoTokenizer
+from pydub import AudioSegment
 
-#---------------------------------------------------------
-# 1. 오디오 데이터 인코딩 함수
-#---------------------------------------------------------
-def encode_audio(waveform, sample_rate, audio_format='wav'):
-    """
-    numpy 배열을 바이트 형식의 오디오 데이터로 변환
-    
-    Parameters:
-    waveform (numpy.ndarray): 오디오 파형 데이터
-    sample_rate (int): 샘플링 레이트
-    audio_format (str): 변환할 오디오 포맷 ('wav', 'mp3', 등)
-    
-    Returns:
-    bytes: 인코딩된 오디오 데이터
-    """
-    # 임시 파일로 WAV 저장
-    temp_wav = io.BytesIO()
-    # 오디오 데이터가 [-1, 1] 범위이면 int16 범위로 변환
-    if waveform.max() <= 1.0 and waveform.min() >= -1.0:
-        waveform = (waveform * 32767).astype(np.int16)
-    scipy.io.wavfile.write(temp_wav, sample_rate, waveform)
-    temp_wav.seek(0)
-    
-    # 요청된 포맷으로 변환
-    from pydub import AudioSegment
-    audio = AudioSegment.from_wav(temp_wav)
-    
-    output = io.BytesIO()
-    if audio_format == 'wav':
-        audio.export(output, format='wav')
-    elif audio_format == 'mp3':
-        audio.export(output, format='mp3')
-    elif audio_format == 'webm':
-        audio.export(output, format='webm')
-    elif audio_format == 'mp4':
-        audio.export(output, format='mp4')
-    else:
-        # 기본값은 wav
-        audio.export(output, format='wav')
-    
-    output.seek(0)
-    return output.read()
-
-#---------------------------------------------------------
-# 2. 비동기 서버 클래스
-#---------------------------------------------------------
-class TtsServer:
-    # --- status_code 정의 ---
+class TTSServer:
+    # 상태 코드 정의
     SUCCESS = 0
     ERR_CHECKCODE_MISMATCH = 1
     ERR_INVALID_DATA = 2
@@ -73,195 +28,259 @@ class TtsServer:
     ERR_UNKNOWN_CODE = 8
     ERR_EXCEPTION = 9
     ERR_TIMEOUT = 10
+    
+    # 요청 코드 정의
+    REQ_TTS = 0x01
+    REQ_PING = 99
+    
+    # 헤더 사이즈
+    HEADER_SIZE = 32
+    
+    # 체크코드 (고정값 - 서버와 클라이언트 간 약속된 값)
+    CHECKCODE = b'TTS1'  # 체크코드는 4바이트
 
-    def __init__(self, host=None, port=None, timeout=None, checkcode=None, tts_model=None, tts_tokenizer=None):
-        # 환경 변수나 기본값으로 설정
-        self.host = host or os.getenv("TTS_HOST", "0.0.0.0")
-        self.port = port or int(os.getenv("TTS_PORT", 2501))
+    def __init__(self, host="0.0.0.0", port=2501, model_path=None):
+        self.host = host
+        self.port = port
+        self.model_path = model_path or "./weights/mms_tts_kor_local"
         
-        # timeout 값이 문자열이면 int로 변환합니다.
-        if timeout is not None:
-            self.timeout = int(timeout)
-        else:
-            self.timeout = int(os.getenv("TTS_TIMEOUT", 10))
+        # 모델 초기화
+        self.load_model()
+
+    def load_model(self):
+        """모델 및 토크나이저 로드"""
+        print(f"[INFO] 모델 로딩 중... (경로: {self.model_path})")
+        
+        # 로컬 경로에 모델이 없다면 다운로드
+        if not os.path.exists(self.model_path):
+            print("[INFO] 로컬에 모델이 없습니다. 다운로드 후 저장합니다...")
+            os.makedirs(self.model_path, exist_ok=True)
             
-        self.checkcode = checkcode or int(os.getenv("TTS_CHECKCODE", 20250326))
-
-        self.tts_model = tts_model
-        self.tts_tokenizer = tts_tokenizer
+            temp_model = VitsModel.from_pretrained("facebook/mms-tts-kor")
+            temp_tokenizer = AutoTokenizer.from_pretrained("facebook/mms-tts-kor")
+            
+            temp_model.save_pretrained(self.model_path)
+            temp_tokenizer.save_pretrained(self.model_path)
+            
+            del temp_model, temp_tokenizer
+            
+            print("[INFO] 모델 다운로드 및 저장 완료")
         
-        # 기본 오디오 설정
-        self.default_sample_rate = 16000  # MMS-TTS의 기본 샘플레이트
+        # 로컬 경로에서 모델 로드
+        self.model = VitsModel.from_pretrained(self.model_path)
+        self.tokenizer = AutoTokenizer.from_pretrained(self.model_path)
+        self.sample_rate = self.model.config.sampling_rate
+        
+        print(f"[INFO] 모델 로드 완료 (샘플링 레이트: {self.sample_rate}Hz)")
 
-    async def receive_data_with_timeout(self, reader, size, label):
-        """
-        비동기 방식으로 데이터 수신 (타임아웃 포함)
-          - size 바이트 만큼 정확히 읽는다.
-        """
+    def generate_audio(self, text):
+        """텍스트에서 오디오 생성"""
+        # 텍스트 토큰화
+        inputs = self.tokenizer(text, return_tensors="pt")
+        
+        # 오디오 생성
+        with torch.no_grad():
+            output = self.model(**inputs).waveform[0]
+        
+        # 출력 텐서를 NumPy 배열로 변환
+        waveform = output.cpu().numpy()
+        
+        return waveform
+
+    def convert_to_bytes(self, waveform, format_type):
+        """NumPy 배열을 오디오 바이트로 변환"""
+        # 정규화 및 int16 변환
+        waveform_norm = waveform / np.abs(waveform).max()
+        waveform_int16 = (waveform_norm * 32767).astype(np.int16)
+        
+        # 바이트 스트림으로 변환
+        output_buffer = io.BytesIO()
+        
+        if format_type == 'wav':
+            import scipy.io.wavfile
+            scipy.io.wavfile.write(output_buffer, self.sample_rate, waveform_int16)
+        else:  # mp3, 기본값
+            # AudioSegment 생성
+            audio_segment = AudioSegment(
+                waveform_int16.tobytes(),
+                frame_rate=self.sample_rate,
+                sample_width=waveform_int16.dtype.itemsize,
+                channels=1
+            )
+            # MP3로 변환
+            audio_segment.export(output_buffer, format="mp3", bitrate="192k")
+        
+        output_buffer.seek(0)
+        return output_buffer.read()
+
+    def create_response_header(self, status_code, payload_size=0):
+        """응답 헤더 생성"""
+        header = bytearray(self.HEADER_SIZE)
+        
+        # 체크코드 삽입 (0-3 바이트)
+        header[0:4] = self.CHECKCODE
+        
+        # 상태 코드 (4 바이트)
+        header[4:5] = struct.pack('!B', status_code)
+        
+        # 타임스탬프 (8-15 바이트)
+        timestamp = int(time.time())
+        header[8:16] = struct.pack('!Q', timestamp)
+        
+        # 페이로드 사이즈 (16-19 바이트)
+        header[16:20] = struct.pack('!I', payload_size)
+        
+        # 예약된 공간은 기본값 0으로 둠
+        
+        return header
+
+    async def handle_tts_request(self, reader, writer, format_code):
+        """TTS 요청 처리"""
+        # 텍스트 길이 수신 (4 바이트)
+        size_bytes = await reader.readexactly(4)
+        text_size = int.from_bytes(size_bytes, byteorder='big')
+        
+        # 텍스트 데이터 수신
+        text_data = await reader.readexactly(text_size)
+        text = text_data.decode('utf-8')
+        
+        print(f"[INFO] 변환 요청 텍스트: {text}")
+        
+        # 포맷 코드 매핑
+        format_map = {1: "wav", 2: "mp3"}
+        audio_format = format_map.get(format_code, "mp3")  # 기본값은 mp3
+        
+        print(f"[INFO] 요청 포맷: {audio_format}")
+        
         try:
-            data = await asyncio.wait_for(reader.readexactly(size), timeout=self.timeout)
-            return data
-        except asyncio.TimeoutError:
-            print(f"[ERROR] {label} 수신 타임아웃 발생")
-            return None
+            # 오디오 생성
+            waveform = self.generate_audio(text)
+            audio_data = self.convert_to_bytes(waveform, audio_format)
+            
+            # 응답 헤더 생성
+            response_header = self.create_response_header(self.SUCCESS, len(audio_data))
+            
+            # 응답 전송: 헤더 + 오디오 데이터
+            writer.write(response_header + audio_data)
+            await writer.drain()
+            
+            print(f"[INFO] 오디오 전송 완료: {len(audio_data)} 바이트")
+            return True
+            
         except Exception as e:
-            print(f"[ERROR] {label} 수신 중 예외 발생: {e}")
-            return None
+            print(f"[ERROR] 오디오 생성 중 오류: {e}")
+            response_header = self.create_response_header(self.ERR_EXCEPTION)
+            writer.write(response_header)
+            await writer.drain()
+            return False
+
+    async def handle_ping_request(self, reader, writer):
+        """Ping 요청 처리"""
+        print(f"[INFO] Ping 요청 수신")
+        
+        # Ping 응답 (pong) 헤더 생성
+        response_header = self.create_response_header(self.SUCCESS)
+        
+        # 응답 전송
+        writer.write(response_header)
+        await writer.drain()
+        
+        print(f"[INFO] Ping 응답 전송 완료")
+        return True
 
     async def handle_client(self, reader, writer):
+        """클라이언트 처리 - 비동기"""
         addr = writer.get_extra_info('peername')
         print(f"[INFO] 클라이언트 연결됨: {addr}")
-
+        
         try:
-            #------------------------------------------------
-            # 1) 헤더(8바이트) 수신: checkcode(4) + request_code(4)
-            #------------------------------------------------
-            header = await reader.readexactly(8)
-            checkcode, request_code = struct.unpack('!ii', header)
-            print(f"[INFO] 요청 - checkcode: {checkcode}, code: {request_code}")
-
-            #------------------------------------------------
-            # 2) checkcode 확인
-            #------------------------------------------------
-            if checkcode != self.checkcode:
-                print("[ERROR] 잘못된 checkcode")
-                response = struct.pack('!iiB', self.checkcode, request_code, self.ERR_CHECKCODE_MISMATCH)
-                writer.write(response)
+            # 헤더 수신 (32 바이트)
+            header = await reader.readexactly(self.HEADER_SIZE)
+            
+            # 체크코드 확인 (0-3 바이트)
+            checkcode = header[0:4]
+            if checkcode != self.CHECKCODE:
+                print(f"[ERROR] 체크코드 불일치: {checkcode}")
+                response_header = self.create_response_header(self.ERR_CHECKCODE_MISMATCH)
+                writer.write(response_header)
                 await writer.drain()
                 return
-
-            #------------------------------------------------
-            # 3) 요청 코드별 처리
-            #------------------------------------------------
-            if request_code == 99:
-                # Ping
-                print("[INFO] Ping 요청 수신")
-                response = struct.pack('!iiB', self.checkcode, request_code, self.SUCCESS)
-                writer.write(response)
-                await writer.drain()
-
-            elif request_code == 0x01:
-                #------------------------------------------------
-                # (A) 오디오 포맷코드(예: 1바이트) 수신
-                #------------------------------------------------
-                format_byte = await self.receive_data_with_timeout(reader, 1, "Audio Format Code")
-                if not format_byte:
-                    print("[ERROR] 오디오 포맷 코드 수신 실패")
-                    response = struct.pack('!iiB', self.checkcode, request_code, self.ERR_INVALID_FORMAT)
-                    writer.write(response)
-                    await writer.drain()
-                    return
-
-                format_code = struct.unpack('!B', format_byte)[0]
-
-                # 포맷 매핑 예시 (원하는 방식으로 확장 가능)
-                format_map = {
-                    1: "wav",
-                    2: "mp3",
-                    3: "webm",
-                    4: "mp4"
-                }
-
-                if format_code not in format_map:
-                    print(f"[ERROR] 지원하지 않는 포맷 코드: {format_code}")
-                    response = struct.pack('!iiB', self.checkcode, request_code, self.ERR_INVALID_FORMAT)
-                    writer.write(response)
-                    await writer.drain()
-                    return
-
-                audio_format_str = format_map[format_code]
-                print(f"[INFO] 오디오 출력 포맷: {audio_format_str}")
-
-                #------------------------------------------------
-                # (B) 텍스트 데이터 길이(4바이트) 수신 후, 텍스트 데이터
-                #------------------------------------------------
-                size_bytes = await self.receive_data_with_timeout(reader, 4, "Text Data Size")
-                if not size_bytes:
-                    print("[ERROR] 텍스트 데이터 길이 정보 수신 실패")
-                    response = struct.pack('!iiB', self.checkcode, request_code, self.ERR_INVALID_DATA)
-                    writer.write(response)
-                    await writer.drain()
-                    return
-                
-                text_size = struct.unpack('!i', size_bytes)[0]
-                print(f"[INFO] 텍스트 데이터 길이: {text_size} 바이트")
-                text_data = await self.receive_data_with_timeout(reader, text_size, "Text Data")
-                if not text_data:
-                    print("[ERROR] 텍스트 데이터 수신 실패")
-                    response = struct.pack('!iiB', self.checkcode, request_code, self.ERR_INVALID_DATA)
-                    writer.write(response)
-                    await writer.drain()
-                    return
-
-                text = text_data.decode('utf-8')
-                print(f"[INFO] 변환할 텍스트: {text}")
-
-                #------------------------------------------------
-                # (C) MMS-TTS 모델 TTS 처리
-                #------------------------------------------------
-                if not self.tts_model or not self.tts_tokenizer:
-                    print("[ERROR] TTS 모델 또는 토크나이저가 초기화되지 않음")
-                    response = struct.pack('!iiB', self.checkcode, request_code, self.ERR_INVALID_REQUEST)
-                    writer.write(response)
-                    await writer.drain()
-                    return
-
-                try:
-                    # 1) 텍스트를 토큰화
-                    inputs = self.tts_tokenizer(text, return_tensors="pt")
-                    
-                    # 2) TTS 모델로 오디오 생성
-                    with torch.no_grad():
-                        output = self.tts_model(**inputs).waveform[0].cpu().numpy()
-                    
-                    print(f"[INFO] 오디오 생성 완료: shape={output.shape}")
-
-                    # 3) 오디오 인코딩 (요청된 포맷으로)
-                    audio_data = encode_audio(output, self.default_sample_rate, audio_format_str)
-                    
-                except Exception as e:
-                    print(f"[ERROR] TTS 변환 중 예외 발생: {e}")
-                    response = struct.pack('!iiB', self.checkcode, request_code, self.ERR_EXCEPTION)
-                    writer.write(response)
-                    await writer.drain()
-                    return
-
-                #------------------------------------------------
-                # (D) 변환 결과 전송
-                #------------------------------------------------
-                response_header = struct.pack('!iiB', self.checkcode, request_code, self.SUCCESS)
-                response_length = struct.pack('!i', len(audio_data))
-                response = response_header + response_length + audio_data
-
-                writer.write(response)
-                await writer.drain()
-
+            
+            # 요청 코드 확인 (4 바이트)
+            req_code = header[4]
+            
+            # 포맷 코드 확인 (5 바이트)
+            format_code = header[5]
+            
+            # 요청 코드에 따른 처리
+            if req_code == self.REQ_TTS:
+                await self.handle_tts_request(reader, writer, format_code)
+            elif req_code == self.REQ_PING:
+                await self.handle_ping_request(reader, writer)
             else:
-                print(f"[ERROR] 알 수 없는 요청 코드: {request_code}")
-                response = struct.pack('!iiB', self.checkcode, request_code, self.ERR_UNKNOWN_CODE)
-                writer.write(response)
+                print(f"[ERROR] 알 수 없는 요청 코드: {req_code}")
+                response_header = self.create_response_header(self.ERR_UNKNOWN_CODE)
+                writer.write(response_header)
                 await writer.drain()
-
+        
         except asyncio.IncompleteReadError:
             print("[ERROR] 클라이언트 데이터 수신 실패")
+            try:
+                response_header = self.create_response_header(self.ERR_INVALID_DATA)
+                writer.write(response_header)
+                await writer.drain()
+            except:
+                pass
+        
         except Exception as e:
             print(f"[ERROR] 처리 중 예외 발생: {e}")
+            try:
+                response_header = self.create_response_header(self.ERR_EXCEPTION)
+                writer.write(response_header)
+                await writer.drain()
+            except:
+                pass
+        
         finally:
             writer.close()
             await writer.wait_closed()
             print(f"[INFO] 클라이언트 연결 종료: {addr}")
 
     async def run_server(self):
-        server = await asyncio.start_server(self.handle_client, self.host, self.port)
+        """서버 실행"""
+        server = await asyncio.start_server(
+            self.handle_client, self.host, self.port
+        )
+        
         addr = server.sockets[0].getsockname()
-        print(f"[INFO] TTS 서버 시작: {addr}, TIMEOUT={self.timeout}s, CHECKCODE={self.checkcode}")
-
+        print(f"[INFO] 개선된 TTS 서버 시작: {addr}")
+        print(f"[INFO] 체크코드: {self.CHECKCODE}, 헤더 크기: {self.HEADER_SIZE}바이트")
+        
         try:
             async with server:
                 await server.serve_forever()
         except KeyboardInterrupt:
-            # Ctrl+C(KeyInterrupt) 시, 에러 메시지 없이 종료
-            print("\n[INFO] 서버가 종료됩니다 (KeyboardInterrupt).")
+            print("\n[INFO] 서버가 종료됩니다.")
             server.close()
             await server.wait_closed()
             sys.exit(0)
+
+# 서버 실행 함수
+def start_server(host="0.0.0.0", port=2501, model_path=None):
+    """TTS 서버 시작"""
+    tts_server = TTSServer(host, port, model_path)
+    asyncio.run(tts_server.run_server())
+
+if __name__ == "__main__":
+    # 커맨드라인에서 포트 지정 가능
+    import argparse
+    
+    parser = argparse.ArgumentParser(description="개선된 TTS 서버")
+    parser.add_argument('--host', default="0.0.0.0", help="서버 호스트 (기본값: 0.0.0.0)")
+    parser.add_argument('--port', type=int, default=2501, help="서버 포트 (기본값: 2501)")
+    parser.add_argument('--model_path', default="./weights/mms_tts_kor_local", 
+                        help="모델 경로 (기본값: ./weights/mms_tts_kor_local)")
+    
+    args = parser.parse_args()
+    
+    start_server(args.host, args.port, args.model_path)
