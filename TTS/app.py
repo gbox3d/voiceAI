@@ -36,15 +36,22 @@ def main():
     torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
 
     print("[INFO] TTS 모델과 토크나이저 로딩 중...")
+    print(f"[INFO] 사용 디바이스: {device}, 데이터 타입: {torch_dtype}")
     
     try:
+        # 모델과 토크나이저 로드
         model = VitsModel.from_pretrained(
             "facebook/mms-tts-kor",
-            torch_dtype=torch_dtype
+            torch_dtype=torch_dtype,
+            low_cpu_mem_usage=True,
+            use_safetensors=True
         ).to(device)
         
+        # 모델을 평가 모드로 설정 (배치 정규화, 드롭아웃 등을 비활성화)
+        model.eval()
+        
         tokenizer = AutoTokenizer.from_pretrained("facebook/mms-tts-kor")
-        print(f"[INFO] TTS 모델 및 토크나이저 로딩 완료 (device: {device})")
+        print(f"[INFO] TTS 모델 및 토크나이저 로딩 완료")
     
     except Exception as e:
         print(f"[ERROR] 모델 로딩 중 오류 발생: {e}")
