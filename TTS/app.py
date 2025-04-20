@@ -8,7 +8,7 @@ import sys
 import argparse
 import asyncio
 from dotenv import load_dotenv
-from server import TtsServer
+from server import TTSServer
 
 import torch
 import numpy as np
@@ -38,24 +38,24 @@ def main():
     print("[INFO] TTS 모델과 토크나이저 로딩 중...")
     print(f"[INFO] 사용 디바이스: {device}, 데이터 타입: {torch_dtype}")
     
-    try:
-        # 모델과 토크나이저 로드
-        model = VitsModel.from_pretrained(
-            "facebook/mms-tts-kor",
-            torch_dtype=torch_dtype,
-            low_cpu_mem_usage=True,
-            use_safetensors=True
-        ).to(device)
+    # try:
+    #     # 모델과 토크나이저 로드
+    #     model = VitsModel.from_pretrained(
+    #         "facebook/mms-tts-kor",
+    #         torch_dtype=torch_dtype,
+    #         low_cpu_mem_usage=True,
+    #         use_safetensors=True
+    #     ).to(device)
         
-        # 모델을 평가 모드로 설정 (배치 정규화, 드롭아웃 등을 비활성화)
-        model.eval()
+    #     # 모델을 평가 모드로 설정 (배치 정규화, 드롭아웃 등을 비활성화)
+    #     model.eval()
         
-        tokenizer = AutoTokenizer.from_pretrained("facebook/mms-tts-kor")
-        print(f"[INFO] TTS 모델 및 토크나이저 로딩 완료")
+    #     tokenizer = AutoTokenizer.from_pretrained("facebook/mms-tts-kor")
+    #     print(f"[INFO] TTS 모델 및 토크나이저 로딩 완료")
     
-    except Exception as e:
-        print(f"[ERROR] 모델 로딩 중 오류 발생: {e}")
-        sys.exit(1)
+    # except Exception as e:
+    #     print(f"[ERROR] 모델 로딩 중 오류 발생: {e}")
+    #     sys.exit(1)
     
     # 4) 서버 실행
     try:
@@ -64,13 +64,16 @@ def main():
         checkcode = int(os.getenv("TTS_CHECKCODE", "20250326"))
         timeout = os.getenv("TTS_TIMEOUT", "10")
         
-        server = TtsServer(
+        # print(f"[INFO] 서버 설정: 호스트={host}, 포트={port}, 체크코드={checkcode}, 타임아웃={timeout}")
+        
+        server = TTSServer(
             host=host,
             port=port,
-            checkcode=checkcode,
-            timeout=timeout,
-            tts_model=model,
-            tts_tokenizer=tokenizer
+            model_path="./weights/mms_tts_kor_local"
+            # checkcode=checkcode,
+            # timeout=timeout,
+            # tts_model=model,
+            # tts_tokenizer=tokenizer
         )
         
         print(f"[INFO] TTS 서버 시작: {host}:{port}")
