@@ -13,6 +13,7 @@ import os
 import threading
 import pygame  # pip install pygame
 import time
+import tempfile
 
 class TTSClientApp:
     # 상태 코드 정의
@@ -64,8 +65,9 @@ class TTSClientApp:
         # Pygame 초기화 (오디오 재생용)
         pygame.mixer.init()
         
-        # 최근 생성된 오디오 파일 경로
-        self.current_audio_file = None
+        # 메모리에 오디오 데이터 저장
+        self.audio_data = None
+        self.audio_format = None
         
         # UI 구성
         self.setup_ui()
@@ -334,17 +336,12 @@ class TTSClientApp:
             
             self.log(f"오디오 데이터 수신 완료: {len(audio_data)} 바이트")
             
-            # 파일로 저장
-            ext = format_extensions.get(format_code, 'wav')
-            filename = f"tts_output.{ext}"
-            with open(filename, 'wb') as f:
-                f.write(audio_data)
-                
-            self.log(f"오디오 파일 저장 완료: {filename}")
-            self.current_audio_file = os.path.abspath(filename)
+            # 메모리에 오디오 데이터 저장
+            self.audio_data = audio_data
+            self.audio_format = format_extensions.get(format_code, 'wav')
             
             # UI 업데이트 (메인 스레드에서)
-            self.root.after(0, lambda: self.status_var.set(f"변환 완료: {filename}"))
+            self.root.after(0, lambda: self.status_var.set(f"변환 완료: 메모리에 {len(audio_data)} 바이트 저장됨"))
             self.root.after(0, lambda: self.convert_button.config(state=tk.NORMAL))
             self.root.after(0, lambda: self.play_button.config(state=tk.NORMAL))
             self.root.after(0, lambda: self.save_button.config(state=tk.NORMAL))
@@ -359,47 +356,71 @@ class TTSClientApp:
             sock.close()
     
     def play_audio(self):
-        """생성된 오디오 파일 재생"""
-        if not self.current_audio_file or not os.path.exists(self.current_audio_file):
-            messagebox.showwarning("경고", "재생할 오디오 파일이 없습니다.")
+        """메모리에 저장된 오디오 데이터 재생"""
+        if self.audio_data is None:
+            messagebox.showwarning("경고", "재생할 오디오 데이터가 없습니다.")
             return
             
         try:
             # 현재 재생 중인 오디오 중지
             pygame.mixer.music.stop()
             
+            # 임시 파일 생성 (pygame은 파일이나 파일 객체가 필요함)
+            temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=f".{self.audio_format}")
+            temp_file.write(self.audio_data)
+            temp_file.close()
+            
             # 새 오디오 로드 및 재생
-            pygame.mixer.music.load(self.current_audio_file)
+            pygame.mixer.music.load(temp_file.name)
             pygame.mixer.music.play()
-            self.status_var.set(f"재생 중: {os.path.basename(self.current_audio_file)}")
-            self.log(f"오디오 재생 중: {self.current_audio_file}")
+            
+            self.status_var.set(f"재생 중: 메모리에 저장된 오디오")
+            self.log(f"오디오 재생 중 (크기: {len(self.audio_data)} 바이트)")
+            
+            # 임시 파일 삭제 (Windows에서는 재생 중에 삭제할 수 없으므로 나중에 삭제)
+            def delete_temp_file():
+                # 재생이 끝날 때까지 기다림
+                while pygame.mixer.music.get_busy():
+                    time.sleep(0.1)
+                try:
+                    os.unlink(temp_file.name)
+                except:
+                    pass  # 삭제 실패 무시
+                    
+            # 별도 스레드에서 임시 파일 삭제
+            cleanup_thread = threading.Thread(target=delete_temp_file)
+            cleanup_thread.daemon = True
+            cleanup_thread.start()
+            
         except Exception as e:
             messagebox.showerror("재생 오류", f"오디오 재생 중 오류 발생: {str(e)}")
     
     def save_audio(self):
-        """생성된 오디오 파일을 다른 이름으로 저장"""
-        if not self.current_audio_file or not os.path.exists(self.current_audio_file):
-            messagebox.showwarning("경고", "저장할 오디오 파일이 없습니다.")
+        """메모리에 저장된 오디오 데이터를 파일로 저장"""
+        if self.audio_data is None:
+            messagebox.showwarning("경고", "저장할 오디오 데이터가 없습니다.")
             return
             
-        ext = os.path.splitext(self.current_audio_file)[1]
-        filetypes = [("오디오 파일", f"*{ext}")]
+        filetypes = [(f"{self.audio_format.upper()} 파일", f"*.{self.audio_format}")]
+        default_name = f"tts_output.{self.audio_format}"
         
         filename = filedialog.asksaveasfilename(
-            defaultextension=ext,
+            defaultextension=f".{self.audio_format}",
             filetypes=filetypes,
+            initialfile=default_name,
             title="오디오 파일 저장"
         )
         
         if filename:
             try:
-                # 파일 복사
-                with open(self.current_audio_file, 'rb') as src, open(filename, 'wb') as dst:
-                    dst.write(src.read())
+                # 파일로 저장
+                with open(filename, 'wb') as f:
+                    f.write(self.audio_data)
                 self.log(f"파일을 저장했습니다: {filename}")
                 self.status_var.set(f"파일 저장 완료: {os.path.basename(filename)}")
             except Exception as e:
                 messagebox.showerror("저장 오류", f"파일 저장 중 오류 발생: {str(e)}")
+                
     def saveConfig(self):
         host = self.host_entry.get()
         port = self.port_entry.get()
@@ -408,6 +429,7 @@ class TTSClientApp:
             f.write(f"{host}\n{port}\n{format_name}")
         self.log("설정을 저장했습니다.")
         self.status_var.set("설정 저장 완료")
+        
     def loadConfig(self) : 
         try:
             with open('config.txt', 'r') as f:
