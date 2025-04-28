@@ -9,6 +9,7 @@ import struct
 import sys
 import os
 import io
+import re
 
 import torch
 import numpy as np
@@ -54,13 +55,14 @@ class AsrServer:
     ERR_UNKNOWN_CODE = 8
     ERR_EXCEPTION = 9
     ERR_TIMEOUT = 10
+    
+    __VERSION__ = "1.0.1"
 
-    def __init__(self, host=None, port=None, timeout=None, checkcode=None, stt_pipeline=None):
+    def __init__(self, host=None, port=None, timeout=None, checkcode=None, stt_pipeline=None, 
+                 min_text_length=5, no_voice_text="novoice"):
         # 환경 변수나 기본값으로 설정
-        self.host = host or os.getenv("ASR_HOST", "0.0.0.0")
-        self.port = port or int(os.getenv("ASR_PORT", 2500))
-        
-        #self.timeout = timeout or int(os.getenv("ASR_TIMEOUT", 10))
+        self.host = host or os.getenv("ASR_HOST", "localhost")
+        self.port = port or int(os.getenv("ASR_PORT", 26070))
         
         # timeout 값이 문자열이면 int로 변환합니다.
         if timeout is not None:
@@ -71,6 +73,10 @@ class AsrServer:
         self.checkcode = checkcode or int(os.getenv("ASR_CHECKCODE", 20250122))
 
         self.stt_pipeline = stt_pipeline
+        
+        # 음성 인식 필터링 관련 설정
+        self.min_text_length = min_text_length  # 최소 텍스트 길이
+        self.no_voice_text = no_voice_text      # 의미 없는 음성일 때 반환할 텍스트
 
     async def receive_data_with_timeout(self, reader, size, label):
         """
@@ -86,6 +92,72 @@ class AsrServer:
         except Exception as e:
             print(f"[ERROR] {label} 수신 중 예외 발생: {e}")
             return None
+    
+    def is_meaningful_speech(self, text):
+        """
+        인식된 텍스트가 의미있는 음성인지 판단합니다.
+        """
+        if text is None:
+            return False
+            
+        # 1. 텍스트 길이 확인 (너무 짧으면 무시)
+        if len(text.strip()) < self.min_text_length:
+            print(f"[INFO] 텍스트가 너무 짧음: '{text}'")
+            return False
+            
+        # 2. 의미 없는 소리 패턴 체크
+        noise_patterns = ["음", "어", "아", "흠", "음...", "어...", "아...", "음~", "어~", "아~"]
+        text_words = text.strip().split()
+        
+        # 모든 단어가 무의미한 소리인지 확인
+        if all(word in noise_patterns for word in text_words):
+            print(f"[INFO] 의미 없는 소리만 포함됨: '{text}'")
+            return False
+            
+        # 3. 반복되는 패턴 체크 (예: "아 아 아 아")
+        if len(text_words) > 2:
+            # 동일한 단어가 3번 이상 반복되면 의미 없는 것으로 간주
+            word_counts = {}
+            for word in text_words:
+                word_counts[word] = word_counts.get(word, 0) + 1
+                
+            max_repeat = max(word_counts.values()) if word_counts else 0
+            if max_repeat >= 3 and max_repeat / len(text_words) > 0.5:  # 50% 이상이 동일 단어 반복
+                print(f"[INFO] 단어 반복 패턴 감지됨: '{text}'")
+                return False
+                
+        # 4. 특수문자나 숫자만으로 구성된 텍스트인지 확인
+        if re.match(r'^[\d\W]+$', text.strip()):
+            print(f"[INFO] 숫자나 특수문자만 포함됨: '{text}'")
+            return False
+            
+        # 추가 필터를 여기에 구현할 수 있습니다
+            
+        return True
+
+    async def process_audio(self, waveform, sr):
+        """
+        오디오 데이터를 처리하고 STT 결과를 반환합니다.
+        의미 없는 음성일 경우 no_voice_text를 반환합니다.
+        """
+        try:
+            # STT Pipeline 호출
+            result = self.stt_pipeline({
+                "array": waveform,
+                "sampling_rate": sr
+            })
+            
+            recognized_text = result["text"].strip()
+            
+            # 의미 있는 음성인지 확인
+            if self.is_meaningful_speech(recognized_text):
+                return recognized_text
+            else:
+                return self.no_voice_text
+                
+        except Exception as e:
+            print(f"[ERROR] 음성 처리 중 오류 발생: {e}")
+            return self.no_voice_text
 
     async def handle_client(self, reader, writer):
         addr = writer.get_extra_info('peername')
@@ -187,19 +259,9 @@ class AsrServer:
                     waveform, sr = decode_audio(audio_data, audio_format_str)
                     print(f"[INFO] 오디오 데이터 변환 완료: shape={waveform.shape}, sr={sr}")   
 
-                    # 2) STT Pipeline 호출
-                    #    numpy array와 sampling_rate 정보를 dictionary로 전달
-                    result = self.stt_pipeline({
-                        "array": waveform,
-                        "sampling_rate": sr
-                        # "language": self.language
-                        })
-                                               
-
-                    
-                    recognized_text = result["text"]
-                    # print("전사 결과:", recognized_text)
-                    
+                    # 2) STT Pipeline 호출 (의미 있는 음성 판단 추가)
+                    recognized_text = await self.process_audio(waveform, sr)
+                    print(f"[INFO] 인식 결과: '{recognized_text}'")
                     
                 except Exception as e:
                     print(f"[ERROR] STT 변환 중 예외 발생: {e}")
@@ -237,7 +299,8 @@ class AsrServer:
     async def run_server(self):
         server = await asyncio.start_server(self.handle_client, self.host, self.port)
         addr = server.sockets[0].getsockname()
-        print(f"[INFO] 서버 시작: {addr}, TIMEOUT={self.timeout}s, CHECKCODE={self.checkcode}")
+        print(f"[INFO] 서버 시작: {addr}, TIMEOUT={self.timeout}s, CHECKCODE={self.checkcode} , VERSION={self.__VERSION__}")
+        print(f"[INFO] 음성 필터링 설정: 최소 길이={self.min_text_length}, 무음성 텍스트='{self.no_voice_text}'")
 
         try:
             async with server:
@@ -282,7 +345,9 @@ if __name__ == "__main__":
         port=2500,
         timeout=10,
         checkcode=20250122,
-        stt_pipeline=stt_pipeline
+        stt_pipeline=stt_pipeline,
+        min_text_length=5,
+        no_voice_text="novoice"
     )
 
     asyncio.run(asr_server.run_server())

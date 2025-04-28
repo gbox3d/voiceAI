@@ -11,11 +11,13 @@ load_dotenv()
 server_host = os.getenv("ASR_HOST", "127.0.0.1")
 server_port = int(os.getenv("ASR_PORT", 2500))
 checkcode = int(os.getenv("ASR_CHECKCODE", 20250122))
+test_file_path = os.getenv("ASR_TEST_FILE_PATH")
+print(f"[INFO] .env 파일에서 환경변수 로드 완료: {server_host}:{server_port}, checkcode: {checkcode}")
 
 print(f"[INFO] 서버 주소: {server_host}:{server_port}, checkcode: {checkcode}")
 
 # 전송할 오디오 파일 경로 (webm 포맷)
-file_path = "/home/gbox3d/work/web_pub/uploads/recording-1739858011070-196134560_unknown.webm"
+file_path = test_file_path
 
 #%% 1. 오디오 파일 읽기
 try:
@@ -33,7 +35,7 @@ request_code = 0x01
 header = struct.pack('!ii', checkcode, request_code)
 
 # 오디오 포맷 코드 (1바이트): webm은 서버의 매핑에 따라 3
-format_code = 3
+format_code = 1
 format_code_bytes = struct.pack('!B', format_code)
 
 # 오디오 데이터 길이 (4바이트) + 오디오 데이터

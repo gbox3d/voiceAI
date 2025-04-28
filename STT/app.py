@@ -19,12 +19,13 @@ from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline # pi
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
 
-5879
-
 def main():
+    
     # 1) 커맨드라인 인자 파서 설정
     parser = argparse.ArgumentParser(description="Run the async server with a custom .env file path.")
     parser.add_argument('--env', default='.env', help="Path to the .env file (default: .env)")
+    parser.add_argument('--min_length', type=int, default=5, help="Minimum text length to consider valid (default: 5)")
+    parser.add_argument('--no_voice_text', type=str, default="novoice", help="Text to return when voice is unclear (default: 'novoice')")
     args = parser.parse_args()
     
     # print(f"[INFO] .env file path: {args.env}")
@@ -41,7 +42,7 @@ def main():
     torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
 
     model_id = "openai/whisper-large-v3-turbo"
-    print("[INFO] 모델과 프로세서 로딩 중...")
+    print(f"[INFO] 모델과 프로세서 로딩 중... model_id: {model_id}, device: {device}, torch_dtype: {torch_dtype}")
     model = AutoModelForSpeechSeq2Seq.from_pretrained(
         model_id,
         torch_dtype=torch_dtype,
@@ -63,7 +64,6 @@ def main():
     
     # 서버 실행
     try:
-        
         host = os.getenv("ASR_HOST")
         port = int(os.getenv("ASR_PORT"))
         checkcode = int(os.getenv("ASR_CHECKCODE"))
@@ -74,8 +74,13 @@ def main():
             port=port,
             checkcode=checkcode,
             timeout=timeout,
-            stt_pipeline=stt_pipeline
+            stt_pipeline=stt_pipeline,
+            min_text_length=args.min_length,
+            no_voice_text=args.no_voice_text
         )
+        
+        # print(f"[INFO] 서버 시작: {host}:{port}, checkcode: {checkcode}, timeout: {timeout} , version: {server.__VERSION__}")
+        
         asyncio.run(server.run_server())
         
     except KeyboardInterrupt:
