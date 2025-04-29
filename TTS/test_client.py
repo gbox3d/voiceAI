@@ -432,7 +432,7 @@ class TTSClientApp:
         
     def loadConfig(self) : 
         try:
-            with open('config.txt', 'r') as f:
+            with open('TTS/config.txt', 'r') as f:
                 lines = f.readlines()
                 host = lines[0].strip()
                 port = lines[1].strip()
