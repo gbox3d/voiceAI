@@ -3,7 +3,7 @@
 *.wav
 node_modules/
 package-lock.json
-.venv/
+.venv*/
 weights/
 datasets/
 __pycache__/
