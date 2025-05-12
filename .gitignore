@@ -9,3 +9,4 @@ datasets/
 __pycache__/
 temp/
 .vscode/
+!hi_kor.wav
