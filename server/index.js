@@ -67,9 +67,18 @@ async function main() {
     const adminkey_doc = await theApp.dataBase.collection('other').findOne({ admin_key: { $exists: true } });
     if (!adminkey_doc) {
       console.log('admin_key is not defined');
-      process.exit(1);
+      // process.exit(1);
+      // admin_key가 없으면 새로 생성
+      theApp.admin_key = Math.random().toString(36).substring(2, 15);
+      await theApp.dataBase.collection('other').insertOne({ admin_key: theApp.admin_key });
+      console.log('admin_key is created : ', theApp.admin_key);
+      console.log('Please save this key in a safe place.');
+
     }
-    theApp.admin_key = adminkey_doc.admin_key; 
+    else {
+      theApp.admin_key = adminkey_doc.admin_key; 
+    }
+    
     console.log('admin_key : ', theApp.admin_key);
   }
   catch (err) {
@@ -78,6 +87,16 @@ async function main() {
   }
 
   const app = express()
+
+  //static content
+  theApp.staticPath = process.env.STATIC_ASSET || './public';
+  if (!fs.existsSync(theApp.staticPath)) {
+    console.log(`static path not found : ${theApp.staticPath}`);
+    process.exit(1);
+  }
+  app.use('/', express.static(theApp.staticPath));
+  console.log(`static path : ${theApp.staticPath}`);
+
 
   //라우터 등록
   const baseApiRouter = baseApi(theApp);
