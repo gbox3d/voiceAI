@@ -60,6 +60,12 @@ class AsrServer:
 
     def __init__(self, host=None, port=None, timeout=None, checkcode=None, stt_pipeline=None, 
                  min_text_length=5, no_voice_text="novoice"):
+        
+        
+        print(f"torch.__version__={torch.__version__}")
+        print(f"torchaudio.__version__={torch.__version__}")
+        
+        
         # 환경 변수나 기본값으로 설정
         self.host = host or os.getenv("ASR_HOST", "localhost")
         self.port = port or int(os.getenv("ASR_PORT", 26070))
@@ -319,7 +325,7 @@ if __name__ == "__main__":
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
 
-    model_id = "openai/whisper-large-v3-turbo"
+    model_id = "openai/whisper-large-v3"
     print("[INFO] 모델과 프로세서 로딩 중...")
     model = AutoModelForSpeechSeq2Seq.from_pretrained(
         model_id,

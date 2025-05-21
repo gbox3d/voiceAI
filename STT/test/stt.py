@@ -17,7 +17,7 @@ print(f"[INFO] .env 파일에서 환경변수 로드 완료: {server_host}:{serv
 print(f"[INFO] 서버 주소: {server_host}:{server_port}, checkcode: {checkcode}")
 
 # 전송할 오디오 파일 경로 (webm 포맷)
-file_path = test_file_path
+file_path = "hi_kor.wav"
 
 #%% 1. 오디오 파일 읽기
 try:

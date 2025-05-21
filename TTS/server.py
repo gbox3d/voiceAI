@@ -51,7 +51,10 @@ class TTSServer:
         tmp_path = tmp.name
         tmp.close()
         # 파일로 합성
-        self.tts.tts_to_file(text, self.spk_id, tmp_path, speed=speed)
+        self.tts.tts_to_file(text, self.spk_id, tmp_path, 
+                             speed=speed, # 속도 조절
+                             quiet=True # 조용히 합성
+                             )
         # 파일 읽기
         with open(tmp_path, 'rb') as f:
             wav_bytes = f.read()
