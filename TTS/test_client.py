@@ -113,7 +113,14 @@ class TTSClientApp:
         text_frame.pack(fill=tk.BOTH, expand=True, pady=5)
         
         self.text_input = scrolledtext.ScrolledText(text_frame, height=8, wrap=tk.WORD)
-        self.text_input.insert(tk.END, "안녕하세요, TTS 서버 테스트입니다.")
+        self.text_input.insert(tk.END, """안녕하세요, T T S 시스템 테스트입니다. 지금부터 시작 하겠습니다. 
+간장 공장 공장장은 강 공장장이고 된장 공장 공장장은 장 공장장이다. 
+강된장 공장 공장장은 공 공장장이다.
+내가 그린 기린 그림은 목이 긴 기린 그린 그림이고, 네가 그린 기린 그림은 목이 안 긴 기린 그린 그림이다.
+                               """
+                               
+                               
+                               )
         self.text_input.pack(fill=tk.BOTH, expand=True)
         
         # === 버튼 영역 ===
