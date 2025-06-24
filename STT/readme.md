@@ -20,7 +20,7 @@ pip install transformers accelerate pydub python-dotenv
 
 ## 실행
 ```bash
-pm2 start app.py --name "asrApp Server" --interpreter python -- --env ../.env
+pm2 start app.py --name "sttApp Server" --interpreter python -- --env ../.env
 
 python app.py --env ../.env
 ```

@@ -1,7 +1,7 @@
 # TTS App Server
 
 TTS App Server는 **텍스트-투-스피치(TTS)** 기능을 TCP 소켓으로 제공하는 경량 서버입니다.  
-`facebook/mms-tts-kor` 모델을 기본으로 사용하며, CUDA GPU가 있으면 자동으로 활용합니다.
+이 서버는 **OpenVoice**와 **MeloTTS** 라이브러리를 기반으로 하며, 다양한 음성 합성 모델을 지원합니다.
 
 ## 환경변수
 
@@ -28,7 +28,7 @@ source .venv_ov/bin/activate   # Windows면 .venv_ov\Scripts\activate
 python -m pip install -U pip
 
 # PyTorch + Torchaudio
-pip install torch==2.2.2+cu118 torchaudio==2.2.2+cu118 --index-url https://download.pytorch.org/whl/cu118 
+#pip install torch==2.2.2+cu118 torchaudio==2.2.2+cu118 --index-url https://download.pytorch.org/whl/cu118 
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
 
 # 가상환경 권장
