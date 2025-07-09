@@ -25,14 +25,9 @@ async function main() {
 
   const theApp = {
     version: getPackageVersion(),
-    eleven_api_key : process.env.ELEVENLABS_API_KEY
-
+    eleven_api_key: process.env.ELEVENLABS_API_KEY
   };
-
-  
-
   console.log(`eleven_api_key : ${theApp.eleven_api_key}`);
-
 
   //mongodb setup
   //mongodb 연결    
@@ -76,9 +71,9 @@ async function main() {
 
     }
     else {
-      theApp.admin_key = adminkey_doc.admin_key; 
+      theApp.admin_key = adminkey_doc.admin_key;
     }
-    
+
     console.log('admin_key : ', theApp.admin_key);
   }
   catch (err) {
@@ -89,7 +84,7 @@ async function main() {
   const app = express()
 
   //static content
-  theApp.staticPath = process.env.STATIC_ASSET || './public';
+  theApp.staticPath = process.env.STATIC_ASSET || '../public';
   if (!fs.existsSync(theApp.staticPath)) {
     console.log(`static path not found : ${theApp.staticPath}`);
     process.exit(1);
@@ -97,16 +92,18 @@ async function main() {
   app.use('/', express.static(theApp.staticPath));
   console.log(`static path : ${theApp.staticPath}`);
 
+  app.use('/llm', express.static('../LLM/pub')); // llm 폴더를 정적 파일로 제공
+
 
   //라우터 등록
   const baseApiRouter = baseApi(theApp);
   const elevenVoiceApiRouter = elevenVoiceApi(theApp);
   const asrApiRouter = asrApi(theApp);
-  
+
   app.use('/api/v1', baseApiRouter);
   app.use('/api/v1/elevenvoice', elevenVoiceApiRouter);
   app.use('/api/v1/asr', asrApiRouter);
-  
+
   // 에러 핸들링 미들웨어 추가
   app.use((err, req, res, next) => {
     if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
@@ -123,23 +120,23 @@ async function main() {
       .send('oops! resource not found')
   });
 
+
   let baseServer;
   if (process.env.SSL === 'True') {
     console.log(`SSL mode ${process.env.SSL}`);
     const options = {
       key: fs.readFileSync(process.env.SSL_KEY),
       cert: fs.readFileSync(process.env.SSL_CERT),
-      ca: fs.readFileSync(process.env.SSL_CA),
     };
-    // https 서버를 만들고 실행시킵니다
-    baseServer = https.createServer(options, app)
-
+    // SSL_CA 환경 변수가 있을 때만 ca 옵션 추가
+    if (process.env.SSL_CA) {
+      options.ca = fs.readFileSync(process.env.SSL_CA);
+    }
+    baseServer = https.createServer(options, app);
   }
   else {
     baseServer = http.createServer({}, app)
   }
-
-  
 
   baseServer.listen(process.env.PORT, () => {
     console.log(`server run at : ${process.env.PORT}`)

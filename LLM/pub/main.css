@@ -1,0 +1,25 @@
+/* Simple additional styles for the Ollama UI */
+
+/* Make list items more readable */
+#model-list li {
+    border-bottom: 1px solid #f1f1f1;
+    padding: 12px;
+}
+
+#model-list li:last-child {
+    border-bottom: none;
+}
+
+/* Version text styling */
+#version {
+    font-family: monospace;
+    padding: 8px;
+    background-color: #f2f2f2;
+    border-radius: 4px;
+    display: inline-block;
+}
+
+/* Style for model tags */
+.w3-tag {
+    margin-right: 4px;
+}
