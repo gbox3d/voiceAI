@@ -5,89 +5,88 @@ import asyncio
 from dotenv import load_dotenv
 from server import AsrServer
 
-
 import torch
-import numpy as np
-from pydub import AudioSegment # pip install pydub
 
-# pydub.AudioSegment는 ffmpeg/avconv가 설치되어 있어야 mp3, webm 등을 처리 가능
-# (pip install pydub, 그리고 OS에 ffmpeg 설치 필요)
-
-from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline # pip install transformers
+# transformers
+from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
 
 # FutureWarning 제거
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 def main():
-    
-    # 1) 커맨드라인 인자 파서 설정
-    parser = argparse.ArgumentParser(description="Run the async server with a custom .env file path.")
+    parser = argparse.ArgumentParser(
+        description="Run the async server with offline model files from a local folder."
+    )
     parser.add_argument('--env', default='.env', help="Path to the .env file (default: .env)")
-    parser.add_argument('--min_length', type=int, default=5, help="Minimum text length to consider valid (default: 5)")
-    parser.add_argument('--no_voice_text', type=str, default="novoice", help="Text to return when voice is unclear (default: 'novoice')")
-    args = parser.parse_args()
-    
-    # print(f"[INFO] .env file path: {args.env}")
 
-    # 2) .env 파일 로드
+    args = parser.parse_args()
+
+    # .env 파일 로드
     if os.path.exists(args.env):
         load_dotenv(dotenv_path=args.env)
         print(f"[INFO] Loaded environment file: {args.env}")
     else:
         print(f"[WARNING] .env file not found: {args.env}")
-        
-    # model load
+
+    # 환경 변수에서 설정값 읽기
+    model_dir = os.getenv("MODEL_DIR", "./models")
+    model_id = os.getenv("MODEL_ID", "openai/whisper-large-v3-turbo")
+    min_text_length = int(os.getenv("MIN_TEXT_LENGTH", 5))
+    no_voice_text = os.getenv("NO_VOICE_TEXT", "novoice")
+
+
+    print(f"[INFO] 모델 ID: {model_id}")
+    print(f"[INFO] 모델 디렉토리: {model_dir}")
+    print(f"[INFO] 최소 텍스트 길이: {min_text_length}")
+    print(f"[INFO] 음성 없음 텍스트: {no_voice_text}")
+
+
+    # 디바이스 및 dtype 설정
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
 
-    model_id = "openai/whisper-large-v3-turbo"
-    print(f"[INFO] 모델과 프로세서 로딩 중... model_id: {model_id}, device: {device}, torch_dtype: {torch_dtype}")
-    model = AutoModelForSpeechSeq2Seq.from_pretrained(
-        model_id,
-        torch_dtype=torch_dtype,
-        low_cpu_mem_usage=True,
-        use_safetensors=True
-    ).to(device)
-    processor = AutoProcessor.from_pretrained(model_id)
-
-    # STT 파이프라인 구성
-    stt_pipeline = pipeline(
-        task="automatic-speech-recognition",
-        model=model,
-        tokenizer=processor.tokenizer,
-        feature_extractor=processor.feature_extractor,
-        device=0 if device.startswith("cuda") else -1
+    print(f"[INFO] 로컬 모델 로드 중... path: {model_dir}, device: {device}")
+    # ① 모델 디렉토리에서 실제 파일을 로드할 때만 local_files_only 사용
+    processor = AutoProcessor.from_pretrained(
+        model_dir,
+        local_files_only=True
     )
-    
+
+    model = AutoModelForSpeechSeq2Seq.from_pretrained(
+        model_dir,
+        local_files_only=True
+    ).to(device)
+
+    stt_pipeline = pipeline(
+    "automatic-speech-recognition",
+    model=model,
+    tokenizer=processor.tokenizer,
+    feature_extractor=processor.feature_extractor,
+    device=device,           # GPU 인덱스(예: 0) 또는 "cuda:0"    
+    )
     print(f"[INFO] STT 파이프라인 구성 완료. (device: {device})")
-    
-    # 서버 실행
+
     try:
         host = os.getenv("ASR_HOST")
         port = int(os.getenv("ASR_PORT"))
         checkcode = int(os.getenv("ASR_CHECKCODE"))
         timeout = os.getenv("ASR_TIMEOUT")
-        
+
         server = AsrServer(
             host=host,
             port=port,
             checkcode=checkcode,
             timeout=timeout,
             stt_pipeline=stt_pipeline,
-            min_text_length=args.min_length,
-            no_voice_text=args.no_voice_text
+            min_text_length=min_text_length,
+            no_voice_text=no_voice_text
         )
-        
-        # print(f"[INFO] 서버 시작: {host}:{port}, checkcode: {checkcode}, timeout: {timeout} , version: {server.__VERSION__}")
-        
         asyncio.run(server.run_server())
-        
     except KeyboardInterrupt:
         pass
     except Exception as e:
         print(e)
-
 
 if __name__ == "__main__":
     main()

@@ -9,10 +9,18 @@ STT App 서버는 실시간 음성 스트리밍을 통해 오디오 데이터를
 * **간단한 TCP 프로토콜**: 구조화된 헤더와 페이로드로 안정적인 데이터 전송
 * **플랫폼 독립성**: 데스크탑, 임베디드 시스템, 모바일 환경 모두 지원
 
+## 설치
+```bash
+
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+
+pip install transformers accelerate pydub python-dotenv
+```
+
 
 ## 실행
 ```bash
-pm2 start app.py --name "asrApp Server" --interpreter python -- --env ../.env
+pm2 start app.py --name "sttApp Server" --interpreter python -- --env ../.env
 
 python app.py --env ../.env
 ```

@@ -14,32 +14,24 @@
 
 <body>
     <div class="w3-container w3-black">
-        <h1>Voice AI Web API</h1>
+        <h1> Real Time Web TTS  </h1>
     </div>
 
     <div class="w3-section w3-container">
-        <ul class="w3-ul">
-            <li>
-                <a href="./eleven/" class="w3-button w3-block w3-green" >Eleven</a>
-            </li>
-            <li>
-                <a href="./whisper" class="w3-button w3-block w3-purple" >Whisper</a>
-            </li>
-            <li>
-                <a href="./tts" class="w3-button w3-block w3-purple" >TTS</a>
-            </li>
+        <p>Text To Speech </p>
+        <input type="text" id="input-speech" class="w3-input" />
+        <div class="w3-container w3-margin" >
+            <button id="btn-speech" class="w3-btn w3-black"> Speech </button>
+        </div>
 
-        </ul>
+        <audio id="player" class="w3-margin" controls></audio>
+        <p id="status" class="w3-text-grey w3-small"></p>
+
     </div>
 
-    <div class="w3-container w3-section">
-        <p>STT Base Url</p>
-        <input type="text" id="apiSTTBaseUrl" class="w3-input" />
-
-        <p>TTS Base Url</p>
-        <input type="text" id="apiTTSBaseUrl" class="w3-input" />
-        
-        
+    <div class="w3-container w3-section" hidden>
+        <p>API Base Url</p>
+        <input type="text" id="apiBaseUrl" class="w3-input" />
         <p>Admin Token</p>
         <input type="text" id="authToken" class="w3-input" />
 
