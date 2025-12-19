@@ -4,7 +4,7 @@
 
 ```bash
 pip install streamlit
-
+pip install python-dotenv
 ```
 ## run
 
