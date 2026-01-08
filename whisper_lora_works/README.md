@@ -1,5 +1,14 @@
 # whisper lora works
 
+## make manifest
+
+이 과정은 학습하기위한 데이터셋의 메타정보를 담은 manifest 파일을 생성합니다.
+
+
+```bash
+ python .\make_manifest.py --root ./datasets/Sample --wav_dir wav --label_dir lb
+```
+
 ## train
 ```bash
 accelerate launch --num_processes 1 train_whisper_lora.py    --model_name openai/whisper-small    --manifest datasets/Sample/manifest.jsonl    --output_dir outputs/small_lora    --max_steps 20    --batch_size 2    --grad_accum 16
@@ -11,6 +20,10 @@ CUDA_VISIBLE_DEVICES=0,1 accelerate launch --num_processes 2 train_whisper_lora.
 
  CUDA_VISIBLE_DEVICES=1 accelerate launch --num_processes 1 train_whisper_lora.py   --model_name openai/whisper-large-v3   --manifest datasets/Sample/manifest.jsonl   --output_dir outputs/largev3_lora   --max_steps 300   --batch_size 16   --grad_accum 16   --fp16   --max_audio_sec 20   --use_gradient_checkpointing   --dataloader_workers 0
 
+
+ # 단일 GPU
+ python train_whisper_lora.py --model_name "openai/whisper-small" --manifest "datasets/Sample/manifest.jsonl" --output_dir "outputs/small_lora" --batch_size 16 --grad_accum 2 --max_steps 300 --fp16 --lr 1e-4
+
 ```
 
 
@@ -20,3 +33,23 @@ CUDA_VISIBLE_DEVICES=0,1 accelerate launch --num_processes 2 train_whisper_lora.
 python eval_dataset_lora.py --manifest datasets/Sample/manifest.jsonl --base_model openai/whisper-small --lora_dir outputs/small_lora --output_csv comparison_results.csv
 
 ```
+
+## merge lora weights to base model
+
+```bash
+ python merge_peft.py
+```
+
+
+
+## convert to ct2
+
+추론 전용 모델로 변환 합니다.  
+
+**--quantization int8_float16: 가중치는 8비트로 줄이고 연산은 16비트로 하여 속도와 정확도를 모두 잡습니다.**   
+
+```bash
+ct2-transformers-converter --model outputs/merged_small --output_dir outputs/ct2_small --quantization int8_float16 --force
+
+```
+

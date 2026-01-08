@@ -25,6 +25,8 @@ dependencies = [
     "librosa>=0.11.0",
     "bitsandbytes>=0.49.0",
     "torchcodec>=0.9.1",
+    "ctranslate2>=4.6.2",
+    "pandas>=2.3.3",
 ]
 
 [[tool.uv.index]]
