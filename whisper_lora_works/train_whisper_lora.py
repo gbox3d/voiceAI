@@ -52,6 +52,11 @@ def parse_args():
 
     # (옵션) 8bit 로딩 (bitsandbytes 필요)
     p.add_argument("--load_in_8bit", action="store_true")
+    
+    p.add_argument("--eval_manifest", type=str, default="", help="검증용 manifest.jsonl (없으면 train에서 자동 분리)")
+    p.add_argument("--eval_steps", type=int, default=300, help="몇 step마다 eval 할지")
+    p.add_argument("--eval_ratio", type=float, default=0.01, help="eval_manifest 없을 때 train에서 분리할 비율")
+
 
     return p.parse_args()
 
@@ -160,8 +165,18 @@ def main():
     os.makedirs(args.output_dir, exist_ok=True)
 
     # Dataset
-    dataset = load_dataset("json", data_files=args.manifest, split="train")
-    dataset = dataset.cast_column("audio", Audio(sampling_rate=16000))
+    # dataset = load_dataset("json", data_files=args.manifest, split="train")
+    # dataset = dataset.cast_column("audio", Audio(sampling_rate=16000))
+    
+    # Dataset (Train / Eval 분리 로드)
+    train_ds = load_dataset("json", data_files=args.manifest, split="train")
+    train_ds = train_ds.cast_column("audio", Audio(sampling_rate=16000))
+
+    if not args.eval_manifest:
+        raise ValueError("--eval_manifest 를 Validation manifest.jsonl 로 지정해주세요.")
+
+    eval_ds = load_dataset("json", data_files=args.eval_manifest, split="train")
+    eval_ds = eval_ds.cast_column("audio", Audio(sampling_rate=16000))
 
     processor = WhisperProcessor.from_pretrained(
         args.model_name,
@@ -179,8 +194,16 @@ def main():
 
     # Whisper 학습 안정화 옵션
     model.config.use_cache = False
+    # if args.use_gradient_checkpointing:
+    #     model.gradient_checkpointing_enable()
+    
     if args.use_gradient_checkpointing:
-        model.gradient_checkpointing_enable()
+        model.config.use_cache = False  # 이미 하시지만, 여기서 확실히
+        model.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
+
+        # (안전장치) PEFT + checkpointing에서 입력 grad 경고/이슈 예방
+        if hasattr(model, "enable_input_require_grads"):
+            model.enable_input_require_grads()
 
     # 한국어/전사 강제(원하면 유지)
     model.config.forced_decoder_ids = processor.get_decoder_prompt_ids(
@@ -205,14 +228,21 @@ def main():
     training_args = TrainingArguments(
         output_dir=args.output_dir,
         per_device_train_batch_size=args.batch_size,
+        per_device_eval_batch_size=args.batch_size,   # ✅ 추가
         gradient_accumulation_steps=args.grad_accum,
         learning_rate=args.lr,
         max_steps=args.max_steps,
         fp16=bool(args.fp16),
+        ddp_find_unused_parameters=False,
 
         logging_steps=10,
         save_steps=100,
         save_total_limit=2,
+        
+        
+        eval_strategy="steps",
+        eval_steps=args.eval_steps,
+        
         report_to="none",
 
         remove_unused_columns=False,
@@ -223,7 +253,8 @@ def main():
     trainer = WhisperTrainer(
         model=model,
         args=training_args,
-        train_dataset=dataset,
+        train_dataset=train_ds,     # ✅ 변경
+        eval_dataset=eval_ds,       # ✅ 추가
         data_collator=DataCollatorSpeechSeq2Seq(processor, max_audio_sec=args.max_audio_sec),
     )
 
