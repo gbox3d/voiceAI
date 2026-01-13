@@ -9,6 +9,7 @@ import pandas as pd
 from tqdm import tqdm
 import soundfile as sf
 from pathlib import Path
+import random
 
 # PyTorch (Base)
 from transformers import WhisperProcessor, WhisperForConditionalGeneration
@@ -27,6 +28,7 @@ def parse_args():
     p.add_argument("--ct2_dir", type=str, default="outputs/ct2_small", help="변환된 CT2 모델 경로")
     p.add_argument("--output_csv", type=str, default="compare_ct2_result.csv", help="결과 저장 파일명")
     p.add_argument("--language", default="ko")
+    p.add_argument("--max_samples", type=int, default=200)
     return p.parse_args()
 
 def load_audio_16k(wav_path: str):
@@ -108,8 +110,13 @@ def main():
     with open(args.manifest, 'r', encoding='utf-8') as f:
         for line in f:
             dataset.append(json.loads(line))
+            
+    if len(dataset) > args.max_samples:
+        dataset = random.sample(dataset, args.max_samples)
     
     print(f"📊 Processing {len(dataset)} samples...")
+    
+    
 
     # --- 3. Warmup (GPU 예열) ---
     print("🔥 Warming up models...")
