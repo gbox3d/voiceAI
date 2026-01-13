@@ -228,7 +228,7 @@ def main():
     training_args = TrainingArguments(
         output_dir=args.output_dir,
         per_device_train_batch_size=args.batch_size,
-        per_device_eval_batch_size=args.batch_size,   # ✅ 추가
+        per_device_eval_batch_size=args.batch_size,
         gradient_accumulation_steps=args.grad_accum,
         learning_rate=args.lr,
         max_steps=args.max_steps,
@@ -236,20 +236,29 @@ def main():
         ddp_find_unused_parameters=False,
 
         logging_steps=10,
-        save_steps=100,
-        save_total_limit=2,
-        
-        
+        save_steps=args.eval_steps,  # ✅ 입력받은 평가 주기(500)와 동일하게 자동 설정
+
+        # -------------------------------------------------------
+        # [수정] Tensorboard 사용 및 안전장치
+        # -------------------------------------------------------
+        report_to=["tensorboard"],                         # ✅ 텐서보드 활성화
+        logging_dir=os.path.join(args.output_dir, "runs"), # ✅ 로그 경로
+
+        save_total_limit=5,             # ✅ 최대 5개 모델 보관
+        load_best_model_at_end=True,    # ✅ 학습 끝날 때 최고 모델 자동 로드
+        metric_for_best_model="eval_loss",
+        greater_is_better=False,
+        # -------------------------------------------------------
+
         eval_strategy="steps",
         eval_steps=args.eval_steps,
         
-        report_to="none",
+        # report_to="none",  # <--- 🗑️ 이 줄은 반드시 삭제하거나 주석 처리하세요!
 
         remove_unused_columns=False,
         dataloader_num_workers=args.dataloader_workers,
         dataloader_pin_memory=bool(args.pin_memory),
     )
-
     trainer = WhisperTrainer(
         model=model,
         args=training_args,

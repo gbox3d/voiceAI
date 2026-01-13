@@ -27,6 +27,7 @@ dependencies = [
     "ctranslate2>=4.6.2",
     "pandas>=2.3.3",
     "torchcodec>=0.9.1",
+    "tensorboard>=2.20.0",
 ]
 
 [[tool.uv.index]]

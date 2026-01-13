@@ -38,6 +38,7 @@ sudo nvidia-smi -i 1 -pl 280
 ```bash
 
 python eval_dataset_lora.py --manifest datasets/Sample/manifest.jsonl --base_model openai/whisper-small --lora_dir outputs/small_lora --output_csv comparison_results.csv
+python eval_dataset_lora.py --manifest /home/agent01/works/dataset/71557/data/Validation/manifest.jsonl --base_model openai/whisper-large-v3 --lora_dir outputs/large_v3_ddp --output_csv outputs/comparison_results.csv --max_samples 200
 
 ```
 
