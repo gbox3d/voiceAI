@@ -244,7 +244,7 @@ def main():
         report_to=["tensorboard"],                         # ✅ 텐서보드 활성화
         logging_dir=os.path.join(args.output_dir, "runs"), # ✅ 로그 경로
 
-        save_total_limit=5,             # ✅ 최대 5개 모델 보관
+        save_total_limit=10,             # ✅ 최대 10개 모델 보관
         load_best_model_at_end=True,    # ✅ 학습 끝날 때 최고 모델 자동 로드
         metric_for_best_model="eval_loss",
         greater_is_better=False,
