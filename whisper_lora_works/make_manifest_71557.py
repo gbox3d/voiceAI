@@ -1,3 +1,7 @@
+#file : whisper_lora_works/make_manifest_71557.py
+#author : gbox3d
+# 이 주석은 수정하지 마세요.
+
 import json
 import re
 import argparse

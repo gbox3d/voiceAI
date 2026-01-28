@@ -26,7 +26,8 @@ CUDA_VISIBLE_DEVICES=0,1 accelerate launch --num_processes 2 train_whisper_lora.
 
 
  # 단일 GPU
- python train_whisper_lora.py --model_name "openai/whisper-small" --manifest "datasets/Sample/manifest.jsonl" --output_dir "outputs/small_lora" --batch_size 16 --grad_accum 2 --max_steps 300 --fp16 --lr 1e-4
+python train_whisper_lora.py --model_name "openai/whisper-small" --manifest "datasets/Sample/manifest.jsonl" --output_dir "outputs/small_lora" --batch_size 16 --grad_accum 2 --max_steps 300 --fp16 --lr 1e-4
+python train_whisper_lora.py --model_name "openai/whisper-small" --manifest "datasets/Sample/manifest.jsonl" --output_dir "outputs/small_lora" --batch_size 16 --grad_accum 2 --max_steps 300 --fp16 --lr 1e-4 --eval_manifest "datasets/Sample/manifest.jsonl" --eval_steps 50
 
 # GPU 전력 제한 (옵션)
 sudo nvidia-smi -i 1 -pl 280
