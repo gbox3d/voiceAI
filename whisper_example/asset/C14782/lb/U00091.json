@@ -1,0 +1,38 @@
+{
+   "01_dataset" : {
+      "1_identifier" : "2022-2-16-137",
+      "2_name" : "한국어 대학 강의 데이터",
+      "3_src_path" : "source/gen/basi/C14782/U00091.wav",
+      "4_label_path" : "labels/gen/basi/C14782/U00091.json",
+      "5_category" : "gen",
+      "6_type" : "음성",
+      "7_copyright" : "Y",
+      "8_src_length" : 1632,
+      "9_speech_length" : "16.802375"
+   },
+   "02_srcinfo" : {
+      "1_id" : "C14782"
+   },
+   "03_lectureinfo" : {
+      "1_city" : "전라도",
+      "2_university_type" : "전문대",
+      "3_major_category" : "basi",
+      "5_collection_type" : "화상회의 온라인강의"
+   },
+   "05_speakerinfo" : {
+      "1_id" : "S00300",
+      "2_gender" : "F",
+      "3_age" : "40대",
+      "4_role" : "강사",
+      "5_dialect" : "표준어"
+   },
+   "06_transcription" : {
+      "1_text" : "일부러 지난 수업 때 배운 엉덩 관절 전치환술도 포함을 하여서 다시 한번 여러분들이 리뷰할 수 있는 시간을 가질 수 있도록 하였으니까 문제 읽으면서 어 이게 이번에 요통에 관한 수업이지?",
+      "2_entity" : [
+         {
+            "1_word" : "엉덩 관절",
+            "2_desc" : "볼기뼈의 절구와 넙다리뼈 머리 사이의 관절."
+         }
+      ]
+   }
+}

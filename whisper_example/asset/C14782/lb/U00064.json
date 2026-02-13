@@ -1,0 +1,32 @@
+{
+   "01_dataset" : {
+      "1_identifier" : "2022-2-16-137",
+      "2_name" : "한국어 대학 강의 데이터",
+      "3_src_path" : "source/gen/basi/C14782/U00064.wav",
+      "4_label_path" : "labels/gen/basi/C14782/U00064.json",
+      "5_category" : "gen",
+      "6_type" : "음성",
+      "7_copyright" : "Y",
+      "8_src_length" : 1632,
+      "9_speech_length" : "12.762375"
+   },
+   "02_srcinfo" : {
+      "1_id" : "C14782"
+   },
+   "03_lectureinfo" : {
+      "1_city" : "전라도",
+      "2_university_type" : "전문대",
+      "3_major_category" : "basi",
+      "5_collection_type" : "화상회의 온라인강의"
+   },
+   "05_speakerinfo" : {
+      "1_id" : "S00300",
+      "2_gender" : "F",
+      "3_age" : "40대",
+      "4_role" : "강사",
+      "5_dialect" : "표준어"
+   },
+   "06_transcription" : {
+      "1_text" : "자 손의 사용이 가능한 환자들이 (worker)/(워커)를 사용하는 데에 적합하다 라고 하였는데 아래의 환자 같은 경우에는 손의 변형으로 인해서 사용하는 데 제한이 있겠죠?"
+   }
+}

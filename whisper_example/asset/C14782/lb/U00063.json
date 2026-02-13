@@ -1,0 +1,32 @@
+{
+   "01_dataset" : {
+      "1_identifier" : "2022-2-16-137",
+      "2_name" : "한국어 대학 강의 데이터",
+      "3_src_path" : "source/gen/basi/C14782/U00063.wav",
+      "4_label_path" : "labels/gen/basi/C14782/U00063.json",
+      "5_category" : "gen",
+      "6_type" : "음성",
+      "7_copyright" : "Y",
+      "8_src_length" : 1632,
+      "9_speech_length" : "9.7824375"
+   },
+   "02_srcinfo" : {
+      "1_id" : "C14782"
+   },
+   "03_lectureinfo" : {
+      "1_city" : "전라도",
+      "2_university_type" : "전문대",
+      "3_major_category" : "basi",
+      "5_collection_type" : "화상회의 온라인강의"
+   },
+   "05_speakerinfo" : {
+      "1_id" : "S00300",
+      "2_gender" : "F",
+      "3_age" : "40대",
+      "4_role" : "강사",
+      "5_dialect" : "표준어"
+   },
+   "06_transcription" : {
+      "1_text" : "이러한 (worker)/(워커)를 사용해야 하는 신체적인 기능이 필요한 요소 중 하나가 손의 사용 손의 기능이었습니다."
+   }
+}

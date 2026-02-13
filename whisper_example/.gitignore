@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# Virtual environment
+.venv/
+
+# Audio files (large)
+*.wav
+*.mp3
+*.flac
+*.ogg
+!asset/*.wav
+!asset/*.mp3
+!asset/C14782/wav/*.wav
+
+# Whisper model cache
+models/
+
+# IDE
+.idea/
+# .vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Output
+output/
+results/

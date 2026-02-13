@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(uv sync:*)",
+      "Bash(ffmpeg:*)",
+      "Bash(uv run python:*)",
+      "Bash(PYTHONIOENCODING=utf-8 uv run python:*)",
+      "Bash(nvidia-smi:*)",
+      "Bash(echo:*)",
+      "Bash(set:*)"
+    ]
+  }
+}
