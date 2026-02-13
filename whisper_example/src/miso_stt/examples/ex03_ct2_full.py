@@ -7,6 +7,11 @@ from miso_stt.backends.ct2 import CT2Transcriber
 from miso_stt.core.audio import TARGET_SR, load_audio
 from miso_stt.core.config import normalize_language
 from miso_stt.core.timeline import split_segments_by_words
+from miso_stt.core.types import Segment
+
+
+def _format_prob(seg: Segment) -> str:
+    return "-" if seg.prob is None else f"{seg.prob:.4f}"
 
 
 def main() -> None:
@@ -44,7 +49,7 @@ def main() -> None:
     print(text)
     print("\n=== TIMELINE (WORD) ===")
     for seg in split_segments_by_words(segments):
-        print(f"{seg.start:.2f}:{seg.end:.2f} | {seg.text}")
+        print(f"{seg.start:.2f}:{seg.end:.2f} | {seg.text} | prob={_format_prob(seg)}")
 
 
 if __name__ == "__main__":

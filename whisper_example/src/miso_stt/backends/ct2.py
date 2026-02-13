@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from pathlib import Path
 
 import numpy as np
@@ -9,6 +10,16 @@ from miso_stt.core.config import CT2_CACHE_DIR, MODEL_DIR, get_compute_type, get
 from miso_stt.core.filters import is_repetition_hallucination
 from miso_stt.core.model_resolver import _resolve_local_ct2_model, describe_ct2_model_path_issue
 from miso_stt.core.types import Segment
+
+
+def _logprob_to_prob(logprob: float | None) -> float | None:
+    if logprob is None:
+        return None
+    try:
+        value = float(logprob)
+    except (TypeError, ValueError):
+        return None
+    return max(0.0, min(1.0, math.exp(value)))
 
 
 class CT2Transcriber:
@@ -110,7 +121,8 @@ class CT2Transcriber:
                 continue
             if is_repetition_hallucination(seg_text):
                 continue
-            segments.append(Segment(round(float(seg.start), 2), round(float(seg.end), 2), seg_text))
+            prob = _logprob_to_prob(getattr(seg, "avg_logprob", None))
+            segments.append(Segment(round(float(seg.start), 2), round(float(seg.end), 2), seg_text, prob))
 
         text = " ".join(seg.text for seg in segments).strip()
         return text, segments

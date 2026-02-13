@@ -17,5 +17,5 @@ def split_segments_by_words(segments: Iterable[Segment]) -> list[Segment]:
         for i, word in enumerate(words):
             w_start = seg.start + (i * step)
             w_end = seg.start + ((i + 1) * step) if i < len(words) - 1 else seg.end
-            word_segments.append(Segment(round(w_start, 2), round(w_end, 2), word))
+            word_segments.append(Segment(round(w_start, 2), round(w_end, 2), word, seg.prob))
     return word_segments

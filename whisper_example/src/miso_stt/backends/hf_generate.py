@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+import math
 
 import numpy as np
 import torch
@@ -11,6 +12,27 @@ from miso_stt.core.config import HF_CACHE_DIR, MODEL_DIR, get_device, get_dtype,
 from miso_stt.core.filters import is_repetition_hallucination
 from miso_stt.core.model_resolver import _resolve_local_hf_model, describe_hf_model_path_issue
 from miso_stt.core.types import Segment
+
+
+def _normalize_prob(value: object) -> float | None:
+    try:
+        score = float(value)
+    except (TypeError, ValueError):
+        return None
+    if 0.0 <= score <= 1.0:
+        return score
+    if score <= 0.0:
+        return max(0.0, min(1.0, math.exp(score)))
+    return None
+
+
+def _extract_segment_prob(seg: dict) -> float | None:
+    for key in ("prob", "avg_logprob", "logprob", "score"):
+        if key in seg:
+            prob = _normalize_prob(seg.get(key))
+            if prob is not None:
+                return prob
+    return None
 
 
 class GenerateTranscriber:
@@ -82,6 +104,7 @@ class GenerateTranscriber:
         self.load_source = load_source
         self.resolved_local_path = resolved_local_path
         self.effective_model_path = str(resolved_local_path) if resolved_local_path is not None else None
+        self.last_full_prob: float | None = None
 
     def transcribe_full(
         self,
@@ -125,6 +148,7 @@ class GenerateTranscriber:
 
         with torch.no_grad():
             output = self.model.generate(input_features, **generate_kwargs)
+        self.last_full_prob = None
 
         segments: list[Segment] = []
         for seg_group in output.get("segments", []):
@@ -133,7 +157,8 @@ class GenerateTranscriber:
                 if text and not is_repetition_hallucination(text):
                     start = float(seg["start"].item())
                     end = float(seg["end"].item())
-                    segments.append(Segment(round(start, 2), round(end, 2), text))
+                    prob = _extract_segment_prob(seg)
+                    segments.append(Segment(round(start, 2), round(end, 2), text, prob))
 
         fulltext = " ".join(seg.text for seg in segments).strip()
         if not fulltext:

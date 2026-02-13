@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from typing import Any, Callable
+import math
 
 import numpy as np
 import torch
@@ -11,6 +12,27 @@ from miso_stt.backends.hf_generate import GenerateTranscriber
 from miso_stt.core.audio import sliding_windows
 from miso_stt.core.filters import is_repetition_hallucination
 from miso_stt.core.types import Segment
+
+
+def _normalize_prob(value: object) -> float | None:
+    try:
+        score = float(value)
+    except (TypeError, ValueError):
+        return None
+    if 0.0 <= score <= 1.0:
+        return score
+    if score <= 0.0:
+        return max(0.0, min(1.0, math.exp(score)))
+    return None
+
+
+def _extract_chunk_prob(ch: dict[str, Any]) -> float | None:
+    for key in ("prob", "score", "avg_logprob", "logprob"):
+        if key in ch:
+            prob = _normalize_prob(ch.get(key))
+            if prob is not None:
+                return prob
+    return None
 
 
 class PipelineTranscriber:
@@ -120,7 +142,8 @@ class PipelineTranscriber:
 
             start = float(ts[0] or 0.0)
             end = float(ts[1] or ts[0] or 0.0)
-            segments.append(Segment(round(start, 2), round(end, 2), seg_text))
+            prob = _extract_chunk_prob(ch)
+            segments.append(Segment(round(start, 2), round(end, 2), seg_text, prob))
 
         fulltext = " ".join(seg.text for seg in segments).strip()
         if not fulltext:
@@ -172,7 +195,8 @@ class PipelineTranscriber:
                     continue
 
                 last_end = max(last_end, end)
-                all_segments.append(Segment(round(start, 2), round(end, 2), seg_text))
+                prob = _extract_chunk_prob(ch)
+                all_segments.append(Segment(round(start, 2), round(end, 2), seg_text, prob))
                 chunk_kept_texts.append(seg_text)
 
             if chunk_kept_texts and on_chunk is not None:

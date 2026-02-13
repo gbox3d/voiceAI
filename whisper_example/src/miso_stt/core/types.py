@@ -8,3 +8,4 @@ class Segment:
     start: float
     end: float
     text: str
+    prob: float | None = None

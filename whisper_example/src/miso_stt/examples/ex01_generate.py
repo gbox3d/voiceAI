@@ -7,6 +7,15 @@ from miso_stt.backends.hf_generate import GenerateTranscriber
 from miso_stt.core.audio import load_audio
 from miso_stt.core.config import normalize_language
 from miso_stt.core.timeline import split_segments_by_words
+from miso_stt.core.types import Segment
+
+
+def _format_prob(seg: Segment) -> str:
+    return "-" if seg.prob is None else f"{seg.prob:.4f}"
+
+
+def _format_value_prob(value: float | None) -> str:
+    return "N/A" if value is None else f"{value:.4f}"
 
 
 def main() -> None:
@@ -39,11 +48,12 @@ def main() -> None:
     )
 
     print(f"Model: {transcriber.model_id}")
+    print(f"Sentence prob: {_format_value_prob(getattr(transcriber, 'last_full_prob', None))}")
     print("\n=== RESULT (FULLTEXT) ===")
     print(text)
     print("\n=== TIMELINE (WORD) ===")
-    for seg in split_segments_by_words(segments): 
-        print(f"{seg.start:.2f}:{seg.end:.2f} | {seg.text}")
+    for seg in split_segments_by_words(segments):
+        print(f"{seg.start:.2f}:{seg.end:.2f} | {seg.text} | prob={_format_prob(seg)}")
 
 
 if __name__ == "__main__":
